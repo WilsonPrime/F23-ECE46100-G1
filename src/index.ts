@@ -1,9 +1,11 @@
-// src/index.ts
+// Octokit used for GitHub token interactions
 import { Octokit } from "@octokit/rest";
+import { fetch_package_metadata } from "./fetch_package_metadata";
 
-// Replace with your GitHub Personal Access Token
-const personalAccessToken = "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";
+// You need to create an access token on GitHub and put it here
+const personalAccessToken = "YOUR_ACCESS_TOKEN";
 
+// chatgpt may or may not have generated the rest of this
 const octokit = new Octokit({
   auth: personalAccessToken,
 });

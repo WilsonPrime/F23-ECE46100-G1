@@ -3,3 +3,4 @@
 Devon Holloway
 Andrew Zhang
 Jaden Guidry
+Wilson Wong

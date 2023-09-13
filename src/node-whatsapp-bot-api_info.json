@@ -1,0 +1,112 @@
+{
+  "_id": "node-whatsapp-bot-api@1.5.0",
+  "_rev": "11-d6f71fddb8520e25bc089ffb59410344",
+  "name": "node-whatsapp-bot-api",
+  "dist-tags": {
+    "latest": "1.5.0"
+  },
+  "versions": [
+    "1.3.5",
+    "1.3.6",
+    "1.4.0",
+    "1.4.1",
+    "1.4.2",
+    "1.4.3",
+    "1.4.4",
+    "1.4.5",
+    "1.4.6",
+    "1.4.7",
+    "1.4.8",
+    "1.5.0"
+  ],
+  "time": {
+    "created": "2023-07-08T16:22:21.955Z",
+    "1.3.5": "2023-07-08T16:22:22.122Z",
+    "modified": "2023-07-22T16:06:44.969Z",
+    "1.3.6": "2023-07-08T16:36:19.084Z",
+    "1.4.0": "2023-07-08T17:07:34.535Z",
+    "1.4.1": "2023-07-08T19:02:18.823Z",
+    "1.4.2": "2023-07-08T19:33:35.915Z",
+    "1.4.3": "2023-07-08T22:44:56.222Z",
+    "1.4.4": "2023-07-09T00:15:17.832Z",
+    "1.4.5": "2023-07-09T18:34:09.452Z",
+    "1.4.6": "2023-07-10T02:43:12.817Z",
+    "1.4.7": "2023-07-12T09:37:44.717Z",
+    "1.4.8": "2023-07-12T09:47:47.676Z",
+    "1.5.0": "2023-07-22T16:06:44.801Z"
+  },
+  "maintainers": [
+    "southpoletux <martin.developer2000@gmail.com>"
+  ],
+  "description": "WhatsApp Bot that can be used as middleware to emit events to listeners. Listeners can react to incoming messages. Additionally, the WhatsApp bot can send messages if a WhatsApp Cloud API token is provided.",
+  "homepage": "https://martin-mohammed.info",
+  "keywords": [
+    "whatsapp",
+    "cloud",
+    "api",
+    "express",
+    "node",
+    "whatsappbot",
+    "bot"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MartinMohammed/whatsapp-cloud-api-express-bot.git"
+  },
+  "author": "Martin Mohammed",
+  "bugs": {
+    "url": "https://github.com/MartinMohammed/whatsapp-cloud-api-express-bot/issues"
+  },
+  "license": "ISC",
+  "readmeFilename": "README.md",
+  "_contentLength": 37662,
+  "version": "1.5.0",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "start": "node ./dist/index-bundle.js",
+    "build": "rm -rf ./dist && tsc --project ./tsconfig.json && cd ../bot-types-bundler && npm run bundle-types",
+    "build:watch": "npm run build && tsc --watch --project ./tsconfig.json",
+    "test": "jest --verbose",
+    "test:watch": "jest --config ./jest.config.js --watchAll"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.195",
+    "jest": "^29.6.1",
+    "lodash": "^4.17.21",
+    "nodemon": "^2.0.22"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.2",
+    "@types/winston": "^2.4.4",
+    "axios": "^1.4.0",
+    "winston": "^3.9.0"
+  },
+  "gitHead": "a81a75ac664468e302cb277b6e3964b55049653c",
+  "_nodeVersion": "16.20.1",
+  "_npmVersion": "8.19.4",
+  "dist": {
+    "integrity": "sha512-n19pSEDkv2d1CYmF1ncIFzsGXu0GT9OdTaET/tbBxm1XiUn/p6vUvV349jbSRDswBto12ISWcqaixkkvFZCHFw==",
+    "shasum": "5b409f354bff18038df6b74b874afae734aa3d7e",
+    "tarball": "https://registry.npmjs.org/node-whatsapp-bot-api/-/node-whatsapp-bot-api-1.5.0.tgz",
+    "fileCount": 37,
+    "unpackedSize": 118923,
+    "signatures": [
+      {
+        "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA",
+        "sig": "MEQCIEYOtmZ5p+gN7RY5jw73y2QhBLMA+oHH2gytoVvCg3gUAiAlL+Xls80FV2UMyun5KRTxMUpw2giWSwCQCjRsXxxjmg=="
+      }
+    ]
+  },
+  "_npmUser": "southpoletux <martin.developer2000@gmail.com>",
+  "directories": {},
+  "_npmOperationalInternal": {
+    "host": "s3://npm-registry-packages",
+    "tmp": "tmp/node-whatsapp-bot-api_1.5.0_1690042004599_0.6981468207818557"
+  },
+  "_hasShrinkwrap": false
+}

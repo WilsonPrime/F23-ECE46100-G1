@@ -1,0 +1,73 @@
+{
+  "_id": "bubble@0.1.0",
+  "_rev": "16-3c4b49763c1232fb7f8547c904ff9a68",
+  "name": "bubble",
+  "dist-tags": {
+    "latest": "0.1.0"
+  },
+  "versions": [
+    "0.0.1",
+    "0.0.2",
+    "0.0.3",
+    "0.0.4",
+    "0.0.5",
+    "0.1.0"
+  ],
+  "maintainers": [
+    "pgte <pedro.teixeira@gmail.com>"
+  ],
+  "time": {
+    "modified": "2022-06-13T05:14:08.490Z",
+    "created": "2012-03-20T16:55:32.784Z",
+    "0.0.1": "2012-03-20T16:55:34.597Z",
+    "0.0.2": "2012-03-20T17:06:46.357Z",
+    "0.0.3": "2012-03-20T17:12:19.871Z",
+    "0.0.4": "2012-03-20T17:23:57.477Z",
+    "0.0.5": "2012-03-21T09:04:21.336Z",
+    "0.1.0": "2012-03-21T09:29:21.342Z"
+  },
+  "author": "Pedro Teixeira",
+  "description": "Domains for the poor man. Flow-control for cascading callbacks. Error handling. Aborts groups of callbacks. With timeouts.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/pgte/bubble.git"
+  },
+  "readmeFilename": "",
+  "_contentLength": 7990,
+  "version": "0.1.0",
+  "tags": [
+    "flow control",
+    "error handling",
+    "domains",
+    "timeout",
+    "callbacks"
+  ],
+  "main": "./bubble.js",
+  "engines": {
+    "node": ">= 0.4.0"
+  },
+  "devDependencies": {
+    "tap": "*"
+  },
+  "scripts": {
+    "test": "node node_modules/tap/bin/tap.js test.js"
+  },
+  "_npmUser": "pgte <pedro.teixeira@gmail.com>",
+  "dependencies": {},
+  "optionalDependencies": {},
+  "_engineSupported": true,
+  "_npmVersion": "1.1.1",
+  "_nodeVersion": "v0.6.11",
+  "_defaultsLoaded": true,
+  "dist": {
+    "shasum": "6f61365e3e2a653e40dcc0fabcb44ff14a74fd03",
+    "tarball": "https://registry.npmjs.org/bubble/-/bubble-0.1.0.tgz",
+    "integrity": "sha512-kvH7gQC671zxTw8NBaGzEYlpem1l8PDAqBBmjOXaCgvG0RXC5B1gY7+QgWJovUAj595S37uM3RSlnlTEXH78FA==",
+    "signatures": [
+      {
+        "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA",
+        "sig": "MEYCIQCEIakUOIS2tQKHnP+BoFudF9HBl16ZN4aI/0TYnCanBQIhAONH58PcKmXw/YeTy2mt2j4QwNYRKlipiFW756NqCj1j"
+      }
+    ]
+  }
+}

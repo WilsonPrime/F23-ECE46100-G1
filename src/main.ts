@@ -105,7 +105,8 @@ async function get_github_package_json(gitDetails: {username: string, repo: stri
                 throw new Error(`Error: ${output.status} ${output.statusText}`);
             }
             const data = await output.json(); // convert to json
-            fs.writeFileSync(`./${detail.username}_${detail.repo}_info.json`, JSON.stringify(data)); // write to file
+            const prettyData = JSON.stringify(data, null, 4); // pretty print json
+            fs.writeFileSync(`./${detail.username}_${detail.repo}_info.json`, prettyData); // write pretty print json to file
             await sleep(2000); // sleep to avoid rate limit
         } catch (error) {
             console.error(`Failed to get github info for user: ${detail.username} and repo: ${detail.repo}`); // throw error for now, might need to exit on error instead for no console outputs other than desired *we can ask*

@@ -148,7 +148,7 @@ function get_npm_package_json(pkgName) {
 }
 function get_github_package_json(gitDetails) {
     return __awaiter(this, void 0, void 0, function () {
-        var _i, gitDetails_1, detail, repoURL, output, data, error_2;
+        var _i, gitDetails_1, detail, repoURL, output, data, prettyData, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -170,7 +170,8 @@ function get_github_package_json(gitDetails) {
                     return [4 /*yield*/, output.json()];
                 case 4:
                     data = _a.sent();
-                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), JSON.stringify(data)); // write to file
+                    prettyData = JSON.stringify(data, null, 4);
+                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), prettyData); // write to file
                     return [4 /*yield*/, sleep(2000)];
                 case 5:
                     _a.sent(); // sleep to avoid rate limit

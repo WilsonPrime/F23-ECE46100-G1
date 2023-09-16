@@ -2,7 +2,7 @@ import * as fs from 'fs';
 
 //Test Path
 const file = 'browserify_info.json';
-const jsonpath = 'nullivex_nodist_info.json';
+const jsonpath = 'lodash_lodash_info.json';
 
 const readJSON = (jsonPath: string, callback: (data: Record<string, any> | null) => void) => {
   fs.readFile(jsonPath, 'utf-8', (err, data) => {
@@ -58,8 +58,13 @@ function countContributors(data: any[]): number {
 
   return uniqueLogins.size;
 }
+// Function to calculate the bus factor score
+function calculateBusFactor(x: number): number {
+  const result = Math.pow((Math.log(x + 1) / (Math.log(1000) + 1)), 1.22);
+  return result;
+}
 
-function parseJSON(filePath: string) {
+function parseContributors(filePath: string) {
   const fs = require('fs');
   try {
     // Read the JSON data from the file
@@ -78,8 +83,10 @@ function parseJSON(filePath: string) {
       .then((contributorsData) => {
         // Handle contributors data 
         const numContributors = countContributors(contributorsData);
-        console.log('Contributors:', contributorsData);
+        const busFactor = calculateBusFactor(numContributors);
+        //console.log('Contributors:', contributorsData);
         console.log('numConstributors:', numContributors);
+        console.log('busFactor:', busFactor);
       })
       .catch((error) => {
         console.error('Error:', error);
@@ -90,4 +97,4 @@ function parseJSON(filePath: string) {
 
 }
 //check_npm_for_open_source(file);
-parseJSON(jsonpath);
+parseContributors(jsonpath);

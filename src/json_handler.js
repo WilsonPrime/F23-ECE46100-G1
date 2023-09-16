@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var fs = require("fs");
 //Test Path
 var file = 'browserify_info.json';
-var jsonpath = 'nullivex_nodist_info.json';
+var jsonpath = 'lodash_lodash_info.json';
 var readJSON = function (jsonPath, callback) {
     fs.readFile(jsonPath, 'utf-8', function (err, data) {
         if (err) {
@@ -56,7 +56,12 @@ function countContributors(data) {
     });
     return uniqueLogins.size;
 }
-function parseJSON(filePath) {
+// Function to calculate the bus factor score
+function calculateBusFactor(x) {
+    var result = Math.pow((Math.log(x + 1) / (Math.log(1000) + 1)), 1.22);
+    return result;
+}
+function parseContributors(filePath) {
     var fs = require('fs');
     try {
         // Read the JSON data from the file
@@ -75,8 +80,10 @@ function parseJSON(filePath) {
             .then(function (contributorsData) {
             // Handle contributors data 
             var numContributors = countContributors(contributorsData);
-            console.log('Contributors:', contributorsData);
+            var busFactor = calculateBusFactor(numContributors);
+            //console.log('Contributors:', contributorsData);
             console.log('numConstributors:', numContributors);
+            console.log('busFactor:', busFactor);
         })
             .catch(function (error) {
             console.error('Error:', error);
@@ -87,4 +94,4 @@ function parseJSON(filePath) {
     }
 }
 //check_npm_for_open_source(file);
-parseJSON(jsonpath);
+parseContributors(jsonpath);

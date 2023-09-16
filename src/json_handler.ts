@@ -61,8 +61,6 @@ function countContributors(data: any[]): number {
 
 function parseJSON(filePath: string) {
   const fs = require('fs');
-  // Replace 'yourJsonFile.json' with the path to your JSON file
-  const jsonFilePath = 'yourJsonFile.json';
   try {
     // Read the JSON data from the file
     const jsonData = fs.readFileSync(filePath, 'utf8');

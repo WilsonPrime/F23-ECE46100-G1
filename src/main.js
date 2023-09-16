@@ -171,7 +171,7 @@ function get_github_package_json(gitDetails) {
                 case 4:
                     data = _a.sent();
                     prettyData = JSON.stringify(data, null, 4);
-                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), prettyData); // write to file
+                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), prettyData); // write pretty print json to file
                     return [4 /*yield*/, sleep(2000)];
                 case 5:
                     _a.sent(); // sleep to avoid rate limit

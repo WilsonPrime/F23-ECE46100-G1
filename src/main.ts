@@ -8,16 +8,66 @@
 // setup
 import * as fs from 'fs'; // use filesystem
 import { execSync } from 'child_process'; // to execute shell cmds
-let npmRegex = /https:\/\/www\.npmjs\.com\/package\/([\w-]+)/i; // regex to get package name from npm url
-let gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get user/repo name  from git url
-var arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
-let pkgName: string[] = []; // setup array for package names
-let gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
+const npmRegex = /https:\/\/www\.npmjs\.com\/package\/([\w-]+)/i; // regex to get package name from npm url
+const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get user/repo name  from git url
+const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
+const pkgName: string[] = []; // setup array for package names
+const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
 
 // sleep function to avoid rate limit
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+const readJSON = (jsonPath: string, callback: (data: Record<string, any> | null) => void) => {
+    fs.readFile(jsonPath, 'utf-8', (err, data) => {
+        if (err) {
+            console.error('Error reading file:', err);
+            callback(null); // Pass null to the callback to indicate an error
+            return;
+        }
+
+        try {
+            const jsonData = JSON.parse(data);
+            callback(jsonData); // Pass the parsed JSON data to the callback
+        }catch (parseError) {
+            console.error('Error parsing JSON:', parseError);
+            callback(null); // Pass null to the callback to indicate an error
+        }
+    });
+};
+
+function check_npm_for_open_source(filePath: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      readJSON(filePath, (jsonData) => {
+        if (jsonData !== null) {
+          if (jsonData.repository.type == 'git') {
+            let gitUrl: string = jsonData.repository.url;
+            if (gitUrl.startsWith('git+ssh://git@')) {
+                // Convert SSH URL to HTTPS URL
+                gitUrl = gitUrl.replace('git+ssh://git@', 'https://');
+            } else if (gitUrl.startsWith('git+https://')) {
+                gitUrl = gitUrl.replace('git+https://', 'https://');
+            }
+
+            if (gitUrl.endsWith('.git')) { 
+                gitUrl = gitUrl.substring(0, gitUrl.length - 4);
+            }
+            console.log(gitUrl); 
+            //return github url
+            resolve(gitUrl);
+          } else {
+            console.log('No git repository found.');
+            resolve("Invalid");
+          }
+        } else {
+          console.error('Failed to read or parse JSON.');
+          resolve(null);
+        }
+      });
+    });
+  }
+
 
 // read urls from file
 const url_list = (filename:string): string[] => {
@@ -39,7 +89,7 @@ const get_npm_package_name = (npmUrl: string): string | null  => {
 }
 
 // gets github username and repo
-const get_github_info = (gitUrl: string): { username: string, repo: string} | null => {
+const get_github_info = (gitUrl: string): { username: string, repo: string} | null  => {
     const gitMatch = gitUrl.match(gitRegex);
     if (gitMatch) { 
         return {
@@ -88,17 +138,29 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
         try {
             const output = execSync(`npm view ${pkg} --json`, { encoding: 'utf8' }); // shell cmd to get json
             fs.writeFileSync(`./${pkg}_info.json`, output); // write json to file
+            const file = `${pkg}_info.json`; // file path
+            const gitURLfromNPM = await check_npm_for_open_source(file);
+            if (gitURLfromNPM) {
+                const gitInfo = get_github_info(gitURLfromNPM);
+
+                if (gitInfo) {
+                    gitDetails.push(gitInfo); // push to github details array
+                    get_github_package_json(gitDetails);
+                }
+            }
             await sleep(2000); // sleep to avoid rate limit
         } catch (error) {
             console.error(`Failed to get npm info for package: ${pkg}`);
-            //process.exit(0); // exit if we fail to get github info
+            //process.exit(0); // exit if we fail to get npm info
         }
     }
 }
 
+
+
 async function get_github_package_json(gitDetails: {username: string, repo: string}[]): Promise<void> { 
-    for (let detail of gitDetails) { 
-        let repoURL: string = `https://api.github.com/repos/${detail.username}/${detail.repo}`; // api url for github
+    for (const detail of gitDetails) { 
+        const repoURL: string = `https://api.github.com/repos/${detail.username}/${detail.repo}`; // api url for github
         try {
             const output = await fetch(repoURL); // fetch json from url
             if (!output.ok) {
@@ -116,3 +178,11 @@ async function get_github_package_json(gitDetails: {username: string, repo: stri
 }   
 get_npm_package_json(pkgName); 
 get_github_package_json(gitDetails);
+
+
+
+
+// Path: jsonhandle.ts
+
+//const file = 'browserify_info.json';
+

@@ -54,6 +54,55 @@ var gitDetails = []; // setup array for git user/repo name
 function sleep(ms) {
     return new Promise(function (resolve) { return setTimeout(resolve, ms); });
 }
+var readJSON = function (jsonPath, callback) {
+    fs.readFile(jsonPath, 'utf-8', function (err, data) {
+        if (err) {
+            console.error('Error reading file:', err);
+            callback(null); // Pass null to the callback to indicate an error
+            return;
+        }
+        try {
+            var jsonData = JSON.parse(data);
+            callback(jsonData); // Pass the parsed JSON data to the callback
+        }
+        catch (parseError) {
+            console.error('Error parsing JSON:', parseError);
+            callback(null); // Pass null to the callback to indicate an error
+        }
+    });
+};
+function check_npm_for_open_source(filePath) {
+    return new Promise(function (resolve) {
+        readJSON(filePath, function (jsonData) {
+            if (jsonData !== null) {
+                if (jsonData.repository.type == 'git') {
+                    var gitUrl = jsonData.repository.url;
+                    if (gitUrl.startsWith('git+ssh://git@')) {
+                        // Convert SSH URL to HTTPS URL
+                        gitUrl = gitUrl.replace('git+ssh://git@', 'https://');
+                    }
+                    else if (gitUrl.startsWith('git+https://')) {
+                        gitUrl = gitUrl.replace('git+https://', 'https://');
+                    }
+                    if (gitUrl.endsWith('.git')) {
+                        gitUrl = gitUrl.substring(0, gitUrl.length - 4);
+                    }
+                    console.log(gitUrl);
+                    //return github url
+                    resolve(gitUrl);
+                }
+                else {
+                    console.log('No git repository found.');
+                    resolve("Invalid");
+                }
+            }
+            else {
+                console.error('Failed to read or parse JSON.');
+                resolve(null);
+            }
+        });
+    });
+}
 // read urls from file
 var url_list = function (filename) {
     try {
@@ -116,32 +165,43 @@ else {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
 function get_npm_package_json(pkgName) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, pkg, output, error_1;
+        var i, pkg, output, file, gitURLfromNPM, gitInfo, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < pkgName.length)) return [3 /*break*/, 6];
+                    if (!(i < pkgName.length)) return [3 /*break*/, 7];
                     pkg = pkgName[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 4, , 5]);
+                    _a.trys.push([2, 5, , 6]);
                     output = (0, child_process_1.execSync)("npm view ".concat(pkg, " --json"), { encoding: 'utf8' });
                     fs.writeFileSync("./".concat(pkg, "_info.json"), output); // write json to file
-                    return [4 /*yield*/, sleep(2000)];
+                    file = "".concat(pkg, "_info.json");
+                    return [4 /*yield*/, check_npm_for_open_source(file)];
                 case 3:
-                    _a.sent(); // sleep to avoid rate limit
-                    return [3 /*break*/, 5];
+                    gitURLfromNPM = _a.sent();
+                    if (gitURLfromNPM) {
+                        gitInfo = get_github_info(gitURLfromNPM);
+                        if (gitInfo) {
+                            gitDetails.push(gitInfo); // push to github details array
+                            get_github_package_json(gitDetails);
+                        }
+                    }
+                    return [4 /*yield*/, sleep(2000)];
                 case 4:
+                    _a.sent(); // sleep to avoid rate limit
+                    return [3 /*break*/, 6];
+                case 5:
                     error_1 = _a.sent();
                     console.error("Failed to get npm info for package: ".concat(pkg));
-                    return [3 /*break*/, 5];
-                case 5:
+                    return [3 /*break*/, 6];
+                case 6:
                     i++;
                     return [3 /*break*/, 1];
-                case 6: return [2 /*return*/];
+                case 7: return [2 /*return*/];
             }
         });
     });
@@ -171,7 +231,7 @@ function get_github_package_json(gitDetails) {
                 case 4:
                     data = _a.sent();
                     prettyData = JSON.stringify(data, null, 4);
-                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), prettyData); // write to file
+                    fs.writeFileSync("./".concat(detail.username, "_").concat(detail.repo, "_info.json"), prettyData); // write pretty print json to file
                     return [4 /*yield*/, sleep(2000)];
                 case 5:
                     _a.sent(); // sleep to avoid rate limit
@@ -190,3 +250,5 @@ function get_github_package_json(gitDetails) {
 }
 get_npm_package_json(pkgName);
 get_github_package_json(gitDetails);
+// Path: jsonhandle.ts
+//const file = 'browserify_info.json';

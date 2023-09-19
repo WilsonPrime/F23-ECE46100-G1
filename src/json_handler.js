@@ -61,6 +61,7 @@ function calculateBusFactor(x) {
     var result = Math.pow((Math.log(x + 1) / (Math.log(1000) + 1)), 1.22);
     return result;
 }
+//function to parse for number of contributors
 function parseContributors(filePath) {
     var fs = require('fs');
     try {
@@ -93,5 +94,76 @@ function parseContributors(filePath) {
         console.error('Error reading or parsing JSON:', error);
     }
 }
+//function to find time between the create and close for an issue
+function findResponsiveTime(data) {
+    var listDifference = []; //list to keep track of time differences for avg
+    var openIssue = []; //list to keep track of open issues
+    data.forEach(function (item) {
+        var issue = item.payload.issue; //check if item is has an issue field
+        if (issue) {
+            if (!item.type.includes("omment")) { //issue comment events also has issue field so check for "omment" in type field ("type": "IssuesEvent" vs "type": "IssueCommentEvent")
+                var createdAt = new Date(issue.created_at);
+                var closedAt = issue.closed_at ? new Date(issue.closed_at) : null; //check if issue has a closed_at field
+                if (closedAt) {
+                    //console.log("");
+                    console.log("ID ".concat(item.id, ": Type ", item.type));
+                    //console.log('created time:', createdAt);
+                    //console.log('closed time:', closedAt);
+                    var difference = closedAt.valueOf() - createdAt.valueOf();
+                    listDifference.push(difference);
+                    //console.log('time differnece', difference);
+                    //console.log("");
+                }
+                else {
+                    console.log("ID ".concat(item.id, ": Type ", item.type));
+                    openIssue.push(item.id);
+                }
+            }
+            else {
+                console.log("ID ".concat(item.id, ": Type ", item.type));
+            }
+        }
+        else {
+            console.log("ID ".concat(item.id, ": Type ", item.type));
+        }
+    });
+    console.log("list of time differences:", listDifference);
+    console.log("list of open issues:", openIssue);
+    if (listDifference.length > 0) {
+        var sum = listDifference.reduce(function (a, b) { return a + b; }) / listDifference.length;
+        return sum;
+    }
+    else {
+        return -1;
+    }
+}
+function parseResponsiveness(filePath) {
+    var fs = require('fs');
+    try {
+        // Read the JSON data from the file
+        var jsonData = fs.readFileSync(filePath, 'utf8');
+        var data = JSON.parse(jsonData);
+        // Access the contributors URL
+        var receivedEventsUrl = data.owner.received_events_url;
+        // Fetch contributors data
+        fetch(receivedEventsUrl)
+            .then(function (response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+            .then(function (receivedEventsData) {
+            findResponsiveTime(receivedEventsData);
+        })
+            .catch(function (error) {
+            console.error('Error getting urls:', error);
+        });
+    }
+    catch (error) {
+        console.error('Error reading or parsing JSON:', error);
+    }
+}
 //check_npm_for_open_source(file);
 parseContributors(jsonpath);
+parseResponsiveness(jsonpath);

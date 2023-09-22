@@ -183,6 +183,24 @@ async function fetchRepoContributors(username: string, repo: string) {
     }
 }
 
+async function fetchRepoLicense(username: string, repo: string) { 
+    try { 
+        const repo_license = await octokit.request("GET /repos/{owner}/{repo}/license", {
+            owner: username,
+            repo: repo,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+        });
+        
+        console.log(`License for ${username}/${repo}: ${repo_license.data.license?.name ?? 'Unknown'}`);
+    } catch (error) { 
+        console.error(`Failed to get repo license for ${username}/${repo}`);
+    }
+    
+}
+
+
 
 async function get_git_info(gitDetails: { username: string, repo: string }[]): Promise<void> {
     for (let i = 0; i < gitDetails.length; i++) {
@@ -190,6 +208,7 @@ async function get_git_info(gitDetails: { username: string, repo: string }[]): P
         try {
             await fetchRepoInfo(gitInfo.username, gitInfo.repo);
             await fetchRepoContributors(gitInfo.username, gitInfo.repo);
+            await fetchRepoLicense(gitInfo.username, gitInfo.repo); 
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
         }

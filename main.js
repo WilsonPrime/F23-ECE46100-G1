@@ -51,7 +51,7 @@ function ensureDirectoryExistence(directory) {
 }
 // octokit setup
 var octokit = new octokit_1.Octokit({
-    auth: '',
+    auth: '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',
     userAgent: 'pkg-manager/v1.0.0'
 });
 ///////////////////////////
@@ -240,35 +240,66 @@ function fetchRepoContributors(username, repo) {
         });
     });
 }
+function fetchRepoLicense(username, repo) {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function () {
+        var repo_license, error_4;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    _c.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/license", {
+                            owner: username,
+                            repo: repo,
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
+                        })];
+                case 1:
+                    repo_license = _c.sent();
+                    console.log("License for ".concat(username, "/").concat(repo, ": ").concat((_b = (_a = repo_license.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : 'Unknown'));
+                    return [3 /*break*/, 3];
+                case 2:
+                    error_4 = _c.sent();
+                    console.error("Failed to get repo license for ".concat(username, "/").concat(repo));
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
 function get_git_info(gitDetails) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, gitInfo, error_4;
+        var i, gitInfo, error_5;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < gitDetails.length)) return [3 /*break*/, 7];
+                    if (!(i < gitDetails.length)) return [3 /*break*/, 8];
                     gitInfo = gitDetails[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 5, , 6]);
+                    _a.trys.push([2, 6, , 7]);
                     return [4 /*yield*/, fetchRepoInfo(gitInfo.username, gitInfo.repo)];
                 case 3:
                     _a.sent();
                     return [4 /*yield*/, fetchRepoContributors(gitInfo.username, gitInfo.repo)];
                 case 4:
                     _a.sent();
-                    return [3 /*break*/, 6];
+                    return [4 /*yield*/, fetchRepoLicense(gitInfo.username, gitInfo.repo)];
                 case 5:
-                    error_4 = _a.sent();
-                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    return [3 /*break*/, 6];
+                    _a.sent();
+                    return [3 /*break*/, 7];
                 case 6:
+                    error_5 = _a.sent();
+                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    return [3 /*break*/, 7];
+                case 7:
                     i++;
                     return [3 /*break*/, 1];
-                case 7: return [2 /*return*/];
+                case 8: return [2 /*return*/];
             }
         });
     });

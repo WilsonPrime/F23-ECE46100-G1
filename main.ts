@@ -16,7 +16,7 @@ function ensureDirectoryExistence(directory: string): void {
 
 // octokit setup
 const octokit = new Octokit({ 
-    auth: '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',
+    auth: '',
     userAgent: 'pkg-manager/v1.0.0'
 });
 
@@ -194,14 +194,30 @@ async function fetchRepoInfo(username,repo) {
     }
 }
 
+async function fetchRepoCollaborators(username: string, repo: string) { 
+    try {
+        const repo_collaborators = await octokit.paginate(`GET /repos/${username}/${repo}/collaborators`, {
+            per_page: 100,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+
+        });
+        console.log(repo_collaborators);
+    } catch (error) { 
+        console.error(`Failed to get repo collaborators for ${username}/${repo} due to: `, error.message);
+    }
+}
+
 
 async function get_git_info(gitDetails: { username: string, repo: string }[]): Promise<void> {
     for (let i = 0; i < gitDetails.length; i++) {
         const gitInfo = gitDetails[i];
         try {
             await fetchRepoInfo(gitInfo.username, gitInfo.repo);
+            await fetchRepoCollaborators(gitInfo.username, gitInfo.repo);
         } catch (error) {
-            console.error(`Failed to get git info for ${gitInfo.username}/${gitInfo.repo}`);
+            console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
         }
     }
 

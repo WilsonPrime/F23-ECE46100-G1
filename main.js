@@ -51,7 +51,7 @@ function ensureDirectoryExistence(directory) {
 }
 // octokit setup
 var octokit = new octokit_1.Octokit({
-    auth: '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',
+    auth: '',
     userAgent: 'pkg-manager/v1.0.0'
 });
 ///////////////////////////
@@ -65,7 +65,7 @@ var url_list = function (filename) {
     }
     catch (error) {
         console.error("File does not exist");
-        process.exit(0);
+        process.exit(1);
     }
 };
 // gets npm package names
@@ -94,42 +94,11 @@ var get_github_info = function (gitUrl) {
     }
     return null;
 };
-// we could probably stick the below into a function, but for now it works :3 
-// this section will take in the urls.txt arguement from the command line and parse it for npm package names and github user/repo names
-if (!arg || typeof arg !== 'string') {
-    console.log("No URL argument provided"); // probably just exit
-    process.exit(1);
-}
-if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
-    var filename = arg;
-    var urls = url_list(filename); // grab urls from file. 
-    if (urls.length === 0) {
-        console.log("No URLS found");
-        process.exit(0);
-    }
-    urls.forEach(function (url) {
-        var npmPackageName = get_npm_package_name(url); // get package name 
-        var gitInfo = get_github_info(url); // get github info
-        if (npmPackageName) {
-            npmPkgName.push(npmPackageName); // push to package name array
-        }
-        else if (gitInfo) {
-            gitDetails.push(gitInfo); // push to github details array
-        }
-        else {
-            console.error("Error, invalid contents of file"); // non git or npm url
-        }
-    });
-}
-else {
-    process.exit(0); // no file name passed
-}
 ////////////////////////////////////////////////////////////////////////////////
 // now we want to get the package.json file from the npm package name and the github repo/username
 // npmPkgName and gitDetails are the arrays we will use to get the package.json files, they hold:
 // the package names and github user/repo names
 ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
-ensureDirectoryExistence('./temp_git_json'); // make temp directory for github json files
 var readJSON = function (jsonPath, callback) {
     fs.readFile(jsonPath, 'utf-8', function (err, data) {
         if (err) {
@@ -219,6 +188,7 @@ function get_npm_package_json(pkgName) {
         });
     });
 }
+//////////////////////////////////////////////////////////////////////
 function fetchRepoInfo(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
         var repo_info, error_2;
@@ -232,7 +202,6 @@ function fetchRepoInfo(username, repo) {
                         })];
                 case 1:
                     repo_info = _a.sent();
-                    console.log(repo_info.data);
                     return [3 /*break*/, 3];
                 case 2:
                     error_2 = _a.sent();
@@ -243,48 +212,114 @@ function fetchRepoInfo(username, repo) {
         });
     });
 }
+function fetchRepoContributors(username, repo) {
+    return __awaiter(this, void 0, void 0, function () {
+        var repo_contributors, numberOfContributors, busFactor, error_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, octokit.paginate("GET /repos/".concat(username, "/").concat(repo, "/contributors"), {
+                            per_page: 100,
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
+                        })];
+                case 1:
+                    repo_contributors = _a.sent();
+                    numberOfContributors = repo_contributors.length;
+                    busFactor = calculateBusFactor(numberOfContributors);
+                    console.log("Bus Factor for ".concat(username, "/").concat(repo, ": ").concat(busFactor.toFixed(5)));
+                    return [3 /*break*/, 3];
+                case 2:
+                    error_3 = _a.sent();
+                    console.error("Failed to get repo collaborators for ".concat(username, "/").concat(repo, " due to: "), error_3.message);
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
 function get_git_info(gitDetails) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, gitInfo, error_3;
+        var i, gitInfo, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < gitDetails.length)) return [3 /*break*/, 6];
+                    if (!(i < gitDetails.length)) return [3 /*break*/, 7];
                     gitInfo = gitDetails[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 4, , 5]);
+                    _a.trys.push([2, 5, , 6]);
                     return [4 /*yield*/, fetchRepoInfo(gitInfo.username, gitInfo.repo)];
                 case 3:
                     _a.sent();
-                    return [3 /*break*/, 5];
+                    return [4 /*yield*/, fetchRepoContributors(gitInfo.username, gitInfo.repo)];
                 case 4:
-                    error_3 = _a.sent();
-                    console.error("Failed to get git info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    return [3 /*break*/, 5];
+                    _a.sent();
+                    return [3 /*break*/, 6];
                 case 5:
+                    error_4 = _a.sent();
+                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    return [3 /*break*/, 6];
+                case 6:
                     i++;
                     return [3 /*break*/, 1];
-                case 6: return [2 /*return*/];
+                case 7: return [2 /*return*/];
             }
         });
     });
 }
+//////////////////////////////////////////////////////////////////////
+// now actual metric score calculations
+function calculateBusFactor(x) {
+    var result = Math.pow((Math.log(x + 1) / (Math.log(1500) + 1)), 1.22);
+    return result;
+}
+//////////////////////////////////////////////////////////////////////
 function main() {
     return __awaiter(this, void 0, void 0, function () {
+        var filename, urls;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, get_npm_package_json(npmPkgName)];
+                case 0:
+                    if (!arg || typeof arg !== 'string') {
+                        console.log("No URL argument provided"); // probably just exit
+                        process.exit(1);
+                    }
+                    if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
+                        filename = arg;
+                        urls = url_list(filename);
+                        if (urls.length === 0) {
+                            console.log("No URLS found");
+                            process.exit(1);
+                        }
+                        urls.forEach(function (url) {
+                            var npmPackageName = get_npm_package_name(url); // get package name 
+                            var gitInfo = get_github_info(url); // get github info
+                            if (npmPackageName) {
+                                npmPkgName.push(npmPackageName); // push to package name array
+                            }
+                            else if (gitInfo) {
+                                gitDetails.push(gitInfo); // push to github details array
+                            }
+                            else {
+                                console.error("Error, invalid contents of file"); // non git or npm url
+                            }
+                        });
+                    }
+                    else {
+                        process.exit(1); // no file name passed
+                    }
+                    return [4 /*yield*/, get_npm_package_json(npmPkgName)];
                 case 1:
                     _a.sent();
                     return [4 /*yield*/, get_git_info(gitDetails)];
                 case 2:
                     _a.sent();
-                    console.log(npmPkgName);
-                    console.log(gitDetails);
                     return [2 /*return*/];
             }
         });

@@ -33,7 +33,7 @@ const url_list = (filename:string): string[] => {
         return fs.readFileSync(filename, 'utf8').split(/\r?\n/).filter(Boolean);
     } catch (error) { 
         console.error(`File does not exist`);
-        process.exit(0);  
+        process.exit(1);  
     }
 }
 
@@ -66,42 +66,13 @@ const get_github_info = (gitUrl: string): { username: string, repo: string} | nu
     return null; 
 }
 
-// we could probably stick the below into a function, but for now it works :3 
-// this section will take in the urls.txt arguement from the command line and parse it for npm package names and github user/repo names
-if (!arg || typeof arg !== 'string') {
-    console.log("No URL argument provided"); // probably just exit
-    process.exit(1);
-}
-
-if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
-    const filename = arg;
-    const urls = url_list(filename); // grab urls from file. 
-    if (urls.length === 0) {
-        console.log("No URLS found");
-        process.exit(0); 
-    }
-    urls.forEach(url => {
-        const npmPackageName = get_npm_package_name(url); // get package name 
-        const gitInfo = get_github_info(url); // get github info
-        if (npmPackageName) {
-            npmPkgName.push(npmPackageName) // push to package name array
-        } else if (gitInfo) {
-            gitDetails.push(gitInfo); // push to github details array
-        } else {
-            console.error("Error, invalid contents of file"); // non git or npm url
-        }
-    }); 
-} else {
-    process.exit(0); // no file name passed
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // now we want to get the package.json file from the npm package name and the github repo/username
 // npmPkgName and gitDetails are the arrays we will use to get the package.json files, they hold:
     // the package names and github user/repo names
 
 ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
-ensureDirectoryExistence('./temp_git_json'); // make temp directory for github json files
+
 
 
 
@@ -171,14 +142,14 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
                     gitDetails.push(gitInfo); // push to github details array
                 }
             }
-            //await sleep(2000); // sleep to avoid rate limit
         } catch (error) {
             console.error(`Failed to get npm info for package: ${pkg}`);
-            //process.exit(0); // exit if we fail to get npm info
         }
     }
 }
 
+
+//////////////////////////////////////////////////////////////////////
 
 async function fetchRepoInfo(username,repo) { 
     try { 
@@ -187,23 +158,26 @@ async function fetchRepoInfo(username,repo) {
             repo: repo
         });
 
-        console.log(repo_info.data); 
 
     } catch (error) { 
         console.error(`Failed to get repo info for ${username}/${repo}`);
     }
 }
 
-async function fetchRepoCollaborators(username: string, repo: string) { 
+async function fetchRepoContributors(username: string, repo: string) { 
     try {
-        const repo_collaborators = await octokit.paginate(`GET /repos/${username}/${repo}/collaborators`, {
+        const repo_contributors = await octokit.paginate(`GET /repos/${username}/${repo}/contributors`, {
             per_page: 100,
             headers: {
                 'X-GitHub-Api-Version': '2022-11-28'
               }
 
         });
-        console.log(repo_collaborators);
+        
+        const numberOfContributors = repo_contributors.length;
+        const busFactor = calculateBusFactor(numberOfContributors);
+        console.log(`Bus Factor for ${username}/${repo}: ${busFactor.toFixed(5)}`); 
+    
     } catch (error) { 
         console.error(`Failed to get repo collaborators for ${username}/${repo} due to: `, error.message);
     }
@@ -215,19 +189,59 @@ async function get_git_info(gitDetails: { username: string, repo: string }[]): P
         const gitInfo = gitDetails[i];
         try {
             await fetchRepoInfo(gitInfo.username, gitInfo.repo);
-            await fetchRepoCollaborators(gitInfo.username, gitInfo.repo);
+            await fetchRepoContributors(gitInfo.username, gitInfo.repo);
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
         }
     }
 
 }
+
+
+
+//////////////////////////////////////////////////////////////////////
+// now actual metric score calculations
+
+function calculateBusFactor(x: number): number {
+    const result = Math.pow((Math.log(x + 1) / (Math.log(1500) + 1)), 1.22);
+    return result;
+  }
+
+//////////////////////////////////////////////////////////////////////
+
 async function main() { 
+
+    if (!arg || typeof arg !== 'string') {
+        console.log("No URL argument provided"); // probably just exit
+        process.exit(1);
+    }
+
+    if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
+        const filename = arg;
+        const urls = url_list(filename); // grab urls from file. 
+        if (urls.length === 0) {
+            console.log("No URLS found");
+            process.exit(1); 
+        }
+        urls.forEach(url => {
+            const npmPackageName = get_npm_package_name(url); // get package name 
+            const gitInfo = get_github_info(url); // get github info
+            if (npmPackageName) {
+                npmPkgName.push(npmPackageName) // push to package name array
+            } else if (gitInfo) {
+                gitDetails.push(gitInfo); // push to github details array
+            } else {
+                console.error("Error, invalid contents of file"); // non git or npm url
+            }
+        }); 
+    } else {
+        process.exit(1); // no file name passed
+    }
     
     await get_npm_package_json(npmPkgName);
     await get_git_info(gitDetails);
-    console.log(npmPkgName);
-    console.log(gitDetails);
+    //console.log(npmPkgName);
+    //console.log(gitDetails);
 }
 
 main();

@@ -200,6 +200,28 @@ async function fetchRepoLicense(username: string, repo: string) {
     
 }
 
+async function fetchRepoReadme(username: string, repo: string) {
+    try {
+        const repo_readme = await octokit.request("GET /repos/{owner}/{repo}/readme", {
+            owner: username,
+            repo: repo,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+        });
+        const readme = Buffer.from(repo_readme.data.content, 'base64').toString('utf8');
+        const test = readme.length; // test to see if readme is empty
+        if (test === 0) {
+            console.log(`Readme for ${username}/${repo}: No readme found`);
+        }
+        console.log(test); 
+        console.log(`Readme for ${username}/${repo}: ${readme}`);
+    } catch (error) {
+        console.error(`Failed to get repo readme for ${username}/${repo}`);
+    }
+}
+
+
 
 
 async function get_git_info(gitDetails: { username: string, repo: string }[]): Promise<void> {
@@ -209,12 +231,15 @@ async function get_git_info(gitDetails: { username: string, repo: string }[]): P
             await fetchRepoInfo(gitInfo.username, gitInfo.repo);
             await fetchRepoContributors(gitInfo.username, gitInfo.repo);
             await fetchRepoLicense(gitInfo.username, gitInfo.repo); 
+            await fetchRepoReadme(gitInfo.username, gitInfo.repo);
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
         }
     }
 
 }
+
+
 
 
 
@@ -230,12 +255,18 @@ function calculateBusFactor(x: number): number {
 
 async function main() { 
 
-    if (!arg || typeof arg !== 'string') {
-        console.log("No URL argument provided"); // probably just exit
-        process.exit(1);
-    }
+    if (arg == "install") {
+        console.log("Install the packages here...\n"); // probably just exit
+        process.exit(0);
+    } else if (arg == "test") {
+        console.log("Run test suite...\n");
+        process.exit(0);
 
-    if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
+    // TODO: regex for .txt
+    } else if (arg == "test.txt") {
+
+        // assume for now we got a valid .txt
+
         const filename = arg;
         const urls = url_list(filename); // grab urls from file. 
         if (urls.length === 0) {
@@ -253,14 +284,16 @@ async function main() {
                 console.error("Error, invalid contents of file"); // non git or npm url
             }
         }); 
+
+        await get_npm_package_json(npmPkgName);
+        await get_git_info(gitDetails);
+
+        process.exit(0);
+
     } else {
-        process.exit(1); // no file name passed
+        console.log("Invalid command...\n")
+        process.exit(1)
     }
-    
-    await get_npm_package_json(npmPkgName);
-    await get_git_info(gitDetails);
-    //console.log(npmPkgName);
-    //console.log(gitDetails);
 }
 
 main();

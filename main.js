@@ -268,20 +268,53 @@ function fetchRepoLicense(username, repo) {
         });
     });
 }
+function fetchRepoReadme(username, repo) {
+    return __awaiter(this, void 0, void 0, function () {
+        var repo_readme, readme, test, error_5;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/readme", {
+                            owner: username,
+                            repo: repo,
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
+                        })];
+                case 1:
+                    repo_readme = _a.sent();
+                    readme = Buffer.from(repo_readme.data.content, 'base64').toString('utf8');
+                    test = readme.length;
+                    if (test === 0) {
+                        console.log("Readme for ".concat(username, "/").concat(repo, ": No readme found"));
+                    }
+                    console.log(test);
+                    console.log("Readme for ".concat(username, "/").concat(repo, ": ").concat(readme));
+                    return [3 /*break*/, 3];
+                case 2:
+                    error_5 = _a.sent();
+                    console.error("Failed to get repo readme for ".concat(username, "/").concat(repo));
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
 function get_git_info(gitDetails) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, gitInfo, error_5;
+        var i, gitInfo, error_6;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < gitDetails.length)) return [3 /*break*/, 8];
+                    if (!(i < gitDetails.length)) return [3 /*break*/, 9];
                     gitInfo = gitDetails[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 6, , 7]);
+                    _a.trys.push([2, 7, , 8]);
                     return [4 /*yield*/, fetchRepoInfo(gitInfo.username, gitInfo.repo)];
                 case 3:
                     _a.sent();
@@ -291,15 +324,18 @@ function get_git_info(gitDetails) {
                     return [4 /*yield*/, fetchRepoLicense(gitInfo.username, gitInfo.repo)];
                 case 5:
                     _a.sent();
-                    return [3 /*break*/, 7];
+                    return [4 /*yield*/, fetchRepoReadme(gitInfo.username, gitInfo.repo)];
                 case 6:
-                    error_5 = _a.sent();
-                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    return [3 /*break*/, 7];
+                    _a.sent();
+                    return [3 /*break*/, 8];
                 case 7:
+                    error_6 = _a.sent();
+                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    return [3 /*break*/, 8];
+                case 8:
                     i++;
                     return [3 /*break*/, 1];
-                case 8: return [2 /*return*/];
+                case 9: return [2 /*return*/];
             }
         });
     });
@@ -317,41 +353,49 @@ function main() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!arg || typeof arg !== 'string') {
-                        console.log("No URL argument provided"); // probably just exit
+                    if (!(arg == "install")) return [3 /*break*/, 1];
+                    console.log("Install the packages here...\n"); // probably just exit
+                    process.exit(0);
+                    return [3 /*break*/, 6];
+                case 1:
+                    if (!(arg == "test")) return [3 /*break*/, 2];
+                    console.log("Run test suite...\n");
+                    process.exit(0);
+                    return [3 /*break*/, 6];
+                case 2:
+                    if (!(arg == "test.txt")) return [3 /*break*/, 5];
+                    filename = arg;
+                    urls = url_list(filename);
+                    if (urls.length === 0) {
+                        console.log("No URLS found");
                         process.exit(1);
                     }
-                    if (arg.length > 2) { // string at least have .txt, if we dont see more than 2 characters we havent gotten a proper file name
-                        filename = arg;
-                        urls = url_list(filename);
-                        if (urls.length === 0) {
-                            console.log("No URLS found");
-                            process.exit(1);
+                    urls.forEach(function (url) {
+                        var npmPackageName = get_npm_package_name(url); // get package name 
+                        var gitInfo = get_github_info(url); // get github info
+                        if (npmPackageName) {
+                            npmPkgName.push(npmPackageName); // push to package name array
                         }
-                        urls.forEach(function (url) {
-                            var npmPackageName = get_npm_package_name(url); // get package name 
-                            var gitInfo = get_github_info(url); // get github info
-                            if (npmPackageName) {
-                                npmPkgName.push(npmPackageName); // push to package name array
-                            }
-                            else if (gitInfo) {
-                                gitDetails.push(gitInfo); // push to github details array
-                            }
-                            else {
-                                console.error("Error, invalid contents of file"); // non git or npm url
-                            }
-                        });
-                    }
-                    else {
-                        process.exit(1); // no file name passed
-                    }
+                        else if (gitInfo) {
+                            gitDetails.push(gitInfo); // push to github details array
+                        }
+                        else {
+                            console.error("Error, invalid contents of file"); // non git or npm url
+                        }
+                    });
                     return [4 /*yield*/, get_npm_package_json(npmPkgName)];
-                case 1:
+                case 3:
                     _a.sent();
                     return [4 /*yield*/, get_git_info(gitDetails)];
-                case 2:
+                case 4:
                     _a.sent();
-                    return [2 /*return*/];
+                    process.exit(0);
+                    return [3 /*break*/, 6];
+                case 5:
+                    console.log("Invalid command...\n");
+                    process.exit(1);
+                    _a.label = 6;
+                case 6: return [2 /*return*/];
             }
         });
     });

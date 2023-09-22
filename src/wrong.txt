@@ -1,5 +1,0 @@
-https://www.npmjs.com/packages/browserify
-https://www.npmjs.com/packages/express
-https://github.coms/lodash/lodash
-asodaspo
-https://www.google.com

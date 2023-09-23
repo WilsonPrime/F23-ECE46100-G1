@@ -1,0 +1,99 @@
+{
+  "_id": "openfoodfacts-nodejs@0.1.0",
+  "_rev": "1-47893947df11bf4b8bfc8d9d43aac59f",
+  "name": "openfoodfacts-nodejs",
+  "dist-tags": {
+    "latest": "0.1.0"
+  },
+  "versions": [
+    "0.0.1",
+    "0.1.0"
+  ],
+  "time": {
+    "created": "2023-01-10T07:56:09.737Z",
+    "0.0.1": "2023-01-10T07:56:09.986Z",
+    "modified": "2023-01-11T20:23:18.170Z",
+    "0.1.0": "2023-01-11T20:23:18.040Z"
+  },
+  "maintainers": [
+    "jbeynar <jakub.bejnarowicz@gmail.com>"
+  ],
+  "description": "Open Food Facts API NodeJS Wrapper",
+  "homepage": "https://github.com/openfoodfacts/openfoodfacts-nodejs#readme",
+  "keywords": [
+    "OFF",
+    "OpenFoodFacts",
+    "NodeJS",
+    "Wrapper"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openfoodfacts/openfoodfacts-nodejs.git"
+  },
+  "author": "openfoodfacts",
+  "bugs": {
+    "url": "https://github.com/openfoodfacts/openfoodfacts-nodejs/issues"
+  },
+  "license": "Apache-2.0",
+  "readmeFilename": "README.md",
+  "_contentLength": 7848,
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "lint": "standard",
+    "commitmsg": "commitlint -quiet=0 --extends=@commitlint/config-conventional -e",
+    "precommit": "standard `git diff --name-only --staged --relative | grep '.js$'`",
+    "fix": "standard --fix",
+    "test": "mocha",
+    "doc": "jsdoc -c .jsdocrc",
+    "contributors:add": "all-contributors add",
+    "contributors:generate": "all-contributors generate"
+  },
+  "standard": {
+    "env": [
+      "mocha"
+    ],
+    "ignore": [
+      "/docs/**/*.js"
+    ]
+  },
+  "dependencies": {
+    "request-promise": "^4.2.6"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.3.0",
+    "@commitlint/config-conventional": "^17.1.0",
+    "chai": "^4.3.6",
+    "all-contributors-cli": "^6.24.0",
+    "boxy-jsdoc-template": "^2.0.2",
+    "jsdoc": "^3.6.11",
+    "mocha": "^9.2.2",
+    "mockery": "^2.1.0",
+    "standard": "^17.0.0"
+  },
+  "types": "./main.d.ts",
+  "gitHead": "92a24edc672429c8cb580037e3816ec8d16263c0",
+  "_nodeVersion": "16.15.0",
+  "_npmVersion": "8.5.5",
+  "dist": {
+    "integrity": "sha512-z70TnSo3z8e/FGaTCcVw4bp077SqNfA7schr2aXjcwa+MpzVahmJM8N7ndanfvKX6u3aNmQ/OvmuU/hUMN9Jhg==",
+    "shasum": "af2944045f2bdab59d4c009b9205ec92dfbb59c7",
+    "tarball": "https://registry.npmjs.org/openfoodfacts-nodejs/-/openfoodfacts-nodejs-0.1.0.tgz",
+    "fileCount": 49,
+    "unpackedSize": 21256680,
+    "signatures": [
+      {
+        "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA",
+        "sig": "MEUCIGCe8RqXSeJxgUZJaQWxg1AK5ZGJPGuElaNJkVwyRBsxAiEA5Nyu+XJDfQAj7uOUkNnKW9sNdbAqkA1OclGgTIAaPLY="
+      }
+    ],
+    "npm-signature": "-----BEGIN PGP SIGNATURE-----\r\nVersion: OpenPGP.js v4.10.10\r\nComment: https://openpgpjs.org\r\n\r\nwsFzBAEBCAAGBQJjvxq2ACEJED1NWxICdlZqFiEECWMYAoorWMhJKdjhPU1b\r\nEgJ2VmqqOhAAmSvVHW15gzy/qtAYEu2ahfpbsvKuuOQEu/5mzq7EHnec4SSn\r\nZlYQ5YSZ530AL+BV/OBHIyyDfnwgOvdgvBrHgWM64H1JiCSof/fe1+92GkDi\r\nsZu4jUO+fZQCKRDuSyJhGMhvAwywhNHGAYPQlQ8q/xDOtHBzV3TzU1vbZydZ\r\nFDatLk0EPZYMzCB4eTxHqF93HEns2iTNTsdQkkb0qm78K11pPqDzJGq52WAn\r\n3l2REOfWvk+MkaKz1tBoWo5lQUU86qlSlwjxq1q+d+vuOh+9kPFMaUk0eXjc\r\n7WpQFv2Yk/7k25ni1pNpyVCN21wrUFWnhWTAE2r562K+bUlVk7EiKlFRJWLL\r\n14xghkArI6ltjHGeVLSoDX3dXrL7WSyIr3KQfcRTvYjHXpgI0X/b4iVKuwMI\r\nEN96PWlp5u9d6sCkpelGwlu4HvLM2xYPlmTasc6Kk7qiqJdLv8yJ6mQQf85o\r\nNqLjFjfUa44F0udqgyL0/3mmuHTbWMcsQzGjnDCUJgzHnYArSiTLsJ1mXH+Y\r\noZL4P/ifko/fsZ6TBsW17Lo5a5sttFHdgF+ZGCOohhyUQRJroRSRcRNynccA\r\nEfJbCnw1j4De8ET0wy3fgvSQ1+fRWiQgC5ndf9JazZloIjiNen7wR2UU7KSX\r\nNYbxl7+G0AE7390GZId9OFdA8flqHuqCINs=\r\n=F1q2\r\n-----END PGP SIGNATURE-----\r\n"
+  },
+  "_npmUser": "jbeynar <jakub.bejnarowicz@gmail.com>",
+  "directories": {},
+  "_npmOperationalInternal": {
+    "host": "s3://npm-registry-packages",
+    "tmp": "tmp/openfoodfacts-nodejs_0.1.0_1673468597855_0.4882140007028233"
+  },
+  "_hasShrinkwrap": false
+}

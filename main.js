@@ -44,6 +44,11 @@ var gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get user/
 var arg = process.argv[2]; // this is the url(s).txt arguement passed to the js executable
 var npmPkgName = []; // setup array for package names
 var gitDetails = []; // setup array for git user/repo name 
+var dependencies = ["octokit"]; // setup array for dependencies
+var mit = "MIT";
+var apache = "Apache";
+var gpl = "GPL";
+var bsd = "BSD";
 function ensureDirectoryExistence(directory) {
     if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
@@ -243,11 +248,12 @@ function fetchRepoContributors(username, repo) {
 function fetchRepoLicense(username, repo) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var repo_license, error_4;
+        var licenseScore, repo_license, license_Score, error_4;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
                     _c.trys.push([0, 2, , 3]);
+                    licenseScore = 0;
                     return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/license", {
                             owner: username,
                             repo: repo,
@@ -257,7 +263,15 @@ function fetchRepoLicense(username, repo) {
                         })];
                 case 1:
                     repo_license = _c.sent();
-                    console.log("License for ".concat(username, "/").concat(repo, ": ").concat((_b = (_a = repo_license.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : 'Unknown'));
+                    license_Score = calcLicenseScore((_b = (_a = repo_license.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : "");
+                    /*
+                    if (repo_license.data.license?.name.includes(mit || apache || gpl || bsd)) {
+                        licenseScore = 1;
+                    } else {
+                        licenseScore = 0;
+                    }
+                    */
+                    console.log("License Score for ".concat(username, "/").concat(repo, ": ").concat(license_Score));
                     return [3 /*break*/, 3];
                 case 2:
                     error_4 = _c.sent();
@@ -270,7 +284,7 @@ function fetchRepoLicense(username, repo) {
 }
 function fetchRepoReadme(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
-        var repo_readme, readme, test, error_5;
+        var repo_readme, readme, test, size_kb, size_kb_int, rampup, error_5;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -286,11 +300,13 @@ function fetchRepoReadme(username, repo) {
                     repo_readme = _a.sent();
                     readme = Buffer.from(repo_readme.data.content, 'base64').toString('utf8');
                     test = readme.length;
+                    size_kb = (test / 1024).toFixed(2);
+                    size_kb_int = parseInt(size_kb);
                     if (test === 0) {
                         console.log("Readme for ".concat(username, "/").concat(repo, ": No readme found"));
                     }
-                    console.log(test);
-                    console.log("Readme for ".concat(username, "/").concat(repo, ": ").concat(readme));
+                    rampup = calcRampUpScore(size_kb_int);
+                    console.log("Rampup time for ".concat(username, "/").concat(repo, ": ").concat(rampup.toFixed(5)));
                     return [3 /*break*/, 3];
                 case 2:
                     error_5 = _a.sent();
@@ -315,6 +331,9 @@ function get_git_info(gitDetails) {
                     _a.label = 2;
                 case 2:
                     _a.trys.push([2, 7, , 8]);
+                    console.log("\nGetting Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    console.log("----------------------------------------");
+                    console.log("\n");
                     return [4 /*yield*/, fetchRepoInfo(gitInfo.username, gitInfo.repo)];
                 case 3:
                     _a.sent();
@@ -327,6 +346,7 @@ function get_git_info(gitDetails) {
                     return [4 /*yield*/, fetchRepoReadme(gitInfo.username, gitInfo.repo)];
                 case 6:
                     _a.sent();
+                    console.log("\n");
                     return [3 /*break*/, 8];
                 case 7:
                     error_6 = _a.sent();
@@ -343,18 +363,42 @@ function get_git_info(gitDetails) {
 //////////////////////////////////////////////////////////////////////
 // now actual metric score calculations
 function calculateBusFactor(x) {
-    var result = Math.pow((Math.log(x + 1) / (Math.log(1500) + 1)), 1.22);
+    var result = Math.pow((Math.log(x + 1) / (Math.log(1500 + 1))), 1.22);
     return result;
+}
+function calcRampUpScore(x) {
+    var result = 1 - (Math.pow((Math.log(x + 1) / (Math.log(847248 + 1))), 1.22));
+    return result;
+}
+function calcLicenseScore(x) {
+    var licenseScore = 0;
+    if (x.includes(apache) || x.includes(mit) || x.includes(gpl) || x.includes(bsd)) {
+        licenseScore = 1;
+    }
+    else {
+        licenseScore = 0;
+    }
+    return licenseScore;
 }
 //////////////////////////////////////////////////////////////////////
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var filename, urls;
+        var _i, dependencies_1, pkg, filename, urls;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     if (!(arg == "install")) return [3 /*break*/, 1];
-                    console.log("Install the packages here...\n"); // probably just exit
+                    for (_i = 0, dependencies_1 = dependencies; _i < dependencies_1.length; _i++) {
+                        pkg = dependencies_1[_i];
+                        try {
+                            (0, child_process_1.execSync)("npm install ".concat(pkg));
+                        }
+                        catch (_b) {
+                            console.error("Error installing dependency ".concat(pkg));
+                            process.exit(1);
+                        }
+                    }
+                    console.log("".concat(dependencies.length, " dependencies installed...\n"));
                     process.exit(0);
                     return [3 /*break*/, 6];
                 case 1:

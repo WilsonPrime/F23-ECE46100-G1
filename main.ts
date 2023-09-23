@@ -7,6 +7,13 @@ const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get use
 const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
 const npmPkgName: string[] = []; // setup array for package names
 const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
+const dependencies: string[] = ["octokit"]; // setup array for dependencies
+
+const mit = "MIT";
+const apache = "Apache";
+const gpl = "GPL";
+const bsd = "BSD"; 
+
 
 function ensureDirectoryExistence(directory: string): void {
     if (!fs.existsSync(directory)) {
@@ -185,6 +192,7 @@ async function fetchRepoContributors(username: string, repo: string) {
 
 async function fetchRepoLicense(username: string, repo: string) { 
     try { 
+        let licenseScore = 0; 
         const repo_license = await octokit.request("GET /repos/{owner}/{repo}/license", {
             owner: username,
             repo: repo,
@@ -192,8 +200,10 @@ async function fetchRepoLicense(username: string, repo: string) {
                 'X-GitHub-Api-Version': '2022-11-28'
               }
         });
-        
-        console.log(`License for ${username}/${repo}: ${repo_license.data.license?.name ?? 'Unknown'}`);
+        const license_Score = calcLicenseScore(repo_license.data.license?.name ?? "");
+       
+        console.log(`License Score for ${username}/${repo}: ${license_Score}`);
+       
     } catch (error) { 
         console.error(`Failed to get repo license for ${username}/${repo}`);
     }
@@ -209,13 +219,19 @@ async function fetchRepoReadme(username: string, repo: string) {
                 'X-GitHub-Api-Version': '2022-11-28'
               }
         });
+        
+        
+
         const readme = Buffer.from(repo_readme.data.content, 'base64').toString('utf8');
         const test = readme.length; // test to see if readme is empty
+        const size_kb = (test / 1024).toFixed(2); // convert to kb
+        const size_kb_int = parseInt(size_kb); // convert to int
+        
         if (test === 0) {
             console.log(`Readme for ${username}/${repo}: No readme found`);
         }
-        console.log(test); 
-        console.log(`Readme for ${username}/${repo}: ${readme}`);
+        const rampup = calcRampUpScore(size_kb_int); // calculate rampup time
+        console.log(`Rampup time for ${username}/${repo}: ${rampup.toFixed(5)}`);
     } catch (error) {
         console.error(`Failed to get repo readme for ${username}/${repo}`);
     }
@@ -228,10 +244,14 @@ async function get_git_info(gitDetails: { username: string, repo: string }[]): P
     for (let i = 0; i < gitDetails.length; i++) {
         const gitInfo = gitDetails[i];
         try {
+            console.log(`\nGetting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
+            console.log(`----------------------------------------`);
+            console.log(`\n`);
             await fetchRepoInfo(gitInfo.username, gitInfo.repo);
             await fetchRepoContributors(gitInfo.username, gitInfo.repo);
             await fetchRepoLicense(gitInfo.username, gitInfo.repo); 
             await fetchRepoReadme(gitInfo.username, gitInfo.repo);
+            console.log(`\n`);
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
         }
@@ -247,16 +267,42 @@ async function get_git_info(gitDetails: { username: string, repo: string }[]): P
 // now actual metric score calculations
 
 function calculateBusFactor(x: number): number {
-    const result = Math.pow((Math.log(x + 1) / (Math.log(1500) + 1)), 1.22);
+    const result = Math.pow((Math.log(x + 1) / (Math.log(1500+1))), 1.22);
     return result;
   }
+
+
+function calcRampUpScore(x: number): number {
+    const result = 1 - (Math.pow((Math.log(x + 1) / (Math.log(847248+1))), 1.22));
+    return result;
+}
+
+function calcLicenseScore(x: string): number { 
+    let licenseScore = 0; 
+    if (x.includes(apache) || x.includes(mit) || x.includes(gpl) || x.includes(bsd)) {
+        licenseScore = 1;
+    } else { 
+        licenseScore = 0;
+    }
+    return licenseScore;
+}
 
 //////////////////////////////////////////////////////////////////////
 
 async function main() { 
 
     if (arg == "install") {
-        console.log("Install the packages here...\n"); // probably just exit
+        for(const pkg of dependencies) {
+            try{
+                execSync(`npm install ${pkg}`);
+            } catch {
+                console.error(`Error installing dependency ${pkg}`);
+                process.exit(1);
+            }
+
+        }
+
+        console.log(`${dependencies.length} dependencies installed...\n`);
         process.exit(0);
     } else if (arg == "test") {
         console.log("Run test suite...\n");

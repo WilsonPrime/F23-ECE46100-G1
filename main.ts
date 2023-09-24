@@ -9,7 +9,7 @@ const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get use
 const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
 const npmPkgName: string[] = []; // setup array for package names
 const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
-const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript"]; // setup array for dependencies
+const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript", "--save-dev typescript jest @types/jest ts-jest"]; // setup array for dependencies
 const gitUrls: string[] = []; // setup array for git urls
 
 // could probably put in array but,"kiss"
@@ -41,7 +41,7 @@ const octokit = new Octokit({
 });
 
 // run es lint
-function runEslint(directory) {
+function runEslint(directory: string) {
     return new Promise((resolve, reject) => {
         exec(`npx eslint ${directory} -o ${directory}/result.json`, { encoding: 'utf8' }, (error: { code: number; }, stdout: unknown, stderr: any) => {
             if (error) {
@@ -136,7 +136,7 @@ const readJSON = (jsonPath: string, callback: (data: Record<string, unknown> | n
   };
   
 
-function check_npm_for_open_source(filePath: string): Promise<string | null> {
+export function check_npm_for_open_source(filePath: string): Promise<string | null> {
     return new Promise((resolve) => {
       readJSON(filePath, (jsonData) => {
         if (jsonData !== null) {
@@ -194,7 +194,7 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
 //////////////////////////////////////////////////////////////////////
 // here we are getting everything we need for our metrics from the api  (contributors, license, readme, issues, etc)
 
-async function fetchRepoInfo(username,repo) { 
+async function fetchRepoInfo(username: string, repo:string ) { 
     try { 
         const repo_info = await octokit.request("GET /repos/{owner}/{repo}", {
             owner: username,
@@ -221,7 +221,7 @@ async function fetchRepoContributors(username: string, repo: string) {
         busFactor = calcuBusFactor(numberOfContributors);
         
     
-    } catch (error) { 
+    } catch (error: any) { 
         console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error.message);
     }
 }
@@ -428,7 +428,7 @@ async function fetchLintOutput(username: string, repo: string) {
         correctness = calcCorrectnessScore(errors,fileCount);
         
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Failed to get lint output for ${username}/${repo}: ${error.message}`);
     }
 }
@@ -662,6 +662,23 @@ async function main() {
         process.exit(0);
     } else if (arg == "test") {
         console.log("Run test suite...\n");
+
+        const command = 'npm test -- --coverage';
+        
+        exec(command, (error: any, stdout: any, stderr: any) => {
+            if (error) {
+              console.error(`npm test error: ${error.message}`);
+              return;
+            }
+          
+            if (stderr) {
+              console.error(`Command execution failed: ${stderr}`);
+            }
+          
+            console.log(`${stdout}`);
+          });
+
+
         process.exit(0);
 
     

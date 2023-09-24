@@ -39,16 +39,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var octokit_1 = require("octokit"); // Octokit v17
 var fs = require("fs"); // use filesystem
 var child_process_1 = require("child_process"); // to execute shell cmds
+var exec = require('child_process').exec; // to execute shell cmds
 var npmRegex = /https:\/\/www\.npmjs\.com\/package\/([\w-]+)/i; // regex to get package name from npm url
 var gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get user/repo name  from git url
 var arg = process.argv[2]; // this is the url(s).txt arguement passed to the js executable
 var npmPkgName = []; // setup array for package names
 var gitDetails = []; // setup array for git user/repo name 
-var dependencies = ["octokit"]; // setup array for dependencies
+var dependencies = ["octokit", "--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript"]; // setup array for dependencies
+var gitUrls = []; // setup array for git urls
+// could probably put in array but,"kiss"
 var mit = "MIT";
 var apache = "Apache";
 var gpl = "GPL";
 var bsd = "BSD";
+var rampup = 0;
+var license = 0;
+var correctness = 0;
+var maintainer = 0;
+var busFactor = 0;
+var score = 0;
+//  we will destroy this directory later
 function ensureDirectoryExistence(directory) {
     if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
@@ -59,6 +69,25 @@ var octokit = new octokit_1.Octokit({
     auth: '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',
     userAgent: 'pkg-manager/v1.0.0'
 });
+// run es lint
+function runEslint(directory) {
+    return new Promise(function (resolve, reject) {
+        exec("npx eslint ".concat(directory, " -o ").concat(directory, "/result.json"), { encoding: 'utf8' }, function (error, stdout, stderr) {
+            if (error) {
+                // Check if the error is due to linting issues
+                if (error.code === 1) {
+                    resolve(stdout); // if error is due to linting, it's not a "real" error for us
+                }
+                else {
+                    reject(error);
+                }
+            }
+            else {
+                resolve(stdout);
+            }
+        });
+    });
+}
 ///////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // this section will take in the urls.txt arguement from the command line and parse it for npm package names and github user/repo names
@@ -73,11 +102,12 @@ var url_list = function (filename) {
         process.exit(1);
     }
 };
-// gets npm package names
-// returns package name
-// returns null if not found
-// npm package names are found in the url after /package/
-// example: https://www.npmjs.com/package/express
+/*
+ gets npm package names
+ returns package name
+ npm package names are found in the url after /package/
+ example: https://www.npmjs.com/package/express
+*/
 var get_npm_package_name = function (npmUrl) {
     var npm_match = npmUrl.match(npmRegex);
     if (npm_match) { // if url is found with proper regex (package identifier)
@@ -85,10 +115,11 @@ var get_npm_package_name = function (npmUrl) {
     }
     return null;
 };
-// gets github username and repo
-// returns object with username and repo
-// returns null if not found
-// example: https://github.com/nullivex/nodist
+/*
+ gets github username and repo
+ returns object with username and repo
+ example: https://github.com/nullivex/nodist
+*/
 var get_github_info = function (gitUrl) {
     var gitMatch = gitUrl.match(gitRegex);
     if (gitMatch) {
@@ -103,7 +134,6 @@ var get_github_info = function (gitUrl) {
 // now we want to get the package.json file from the npm package name and the github repo/username
 // npmPkgName and gitDetails are the arrays we will use to get the package.json files, they hold:
 // the package names and github user/repo names
-ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
 var readJSON = function (jsonPath, callback) {
     fs.readFile(jsonPath, 'utf-8', function (err, data) {
         if (err) {
@@ -138,8 +168,8 @@ function check_npm_for_open_source(filePath) {
                     if (gitUrl.endsWith('.git')) {
                         gitUrl = gitUrl.substring(0, gitUrl.length - 4);
                     }
-                    console.log(gitUrl);
                     //return github url
+                    gitUrls.push(gitUrl);
                     resolve(gitUrl);
                 }
                 else {
@@ -194,6 +224,7 @@ function get_npm_package_json(pkgName) {
     });
 }
 //////////////////////////////////////////////////////////////////////
+// here we are getting everything we need for our metrics from the api  (contributors, license, readme, issues, etc)
 function fetchRepoInfo(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
         var repo_info, error_2;
@@ -207,7 +238,7 @@ function fetchRepoInfo(username, repo) {
                         })];
                 case 1:
                     repo_info = _a.sent();
-                    return [3 /*break*/, 3];
+                    return [2 /*return*/, repo_info];
                 case 2:
                     error_2 = _a.sent();
                     console.error("Failed to get repo info for ".concat(username, "/").concat(repo));
@@ -219,7 +250,7 @@ function fetchRepoInfo(username, repo) {
 }
 function fetchRepoContributors(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
-        var repo_contributors, numberOfContributors, busFactor, error_3;
+        var repo_contributors, numberOfContributors, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -233,12 +264,11 @@ function fetchRepoContributors(username, repo) {
                 case 1:
                     repo_contributors = _a.sent();
                     numberOfContributors = repo_contributors.length;
-                    busFactor = calculateBusFactor(numberOfContributors);
-                    console.log("Bus Factor for ".concat(username, "/").concat(repo, ": ").concat(busFactor.toFixed(5)));
+                    busFactor = calcuBusFactor(numberOfContributors);
                     return [3 /*break*/, 3];
                 case 2:
                     error_3 = _a.sent();
-                    console.error("Failed to get repo collaborators for ".concat(username, "/").concat(repo, " due to: "), error_3.message);
+                    console.error("Failed to get repo contributors for ".concat(username, "/").concat(repo, " due to: "), error_3.message);
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
@@ -248,7 +278,7 @@ function fetchRepoContributors(username, repo) {
 function fetchRepoLicense(username, repo) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var licenseScore, repo_license, license_Score, error_4;
+        var licenseScore, response, error_4;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
@@ -262,20 +292,13 @@ function fetchRepoLicense(username, repo) {
                             }
                         })];
                 case 1:
-                    repo_license = _c.sent();
-                    license_Score = calcLicenseScore((_b = (_a = repo_license.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : "");
-                    /*
-                    if (repo_license.data.license?.name.includes(mit || apache || gpl || bsd)) {
-                        licenseScore = 1;
-                    } else {
-                        licenseScore = 0;
-                    }
-                    */
-                    console.log("License Score for ".concat(username, "/").concat(repo, ": ").concat(license_Score));
+                    response = _c.sent();
+                    license = calcLicenseScore((_b = (_a = response.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : "");
                     return [3 /*break*/, 3];
                 case 2:
                     error_4 = _c.sent();
                     console.error("Failed to get repo license for ".concat(username, "/").concat(repo));
+                    license = 0;
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
@@ -284,7 +307,7 @@ function fetchRepoLicense(username, repo) {
 }
 function fetchRepoReadme(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
-        var repo_readme, readme, test, size_kb, size_kb_int, rampup, error_5;
+        var repo_readme, readme, test, size_kb, size_kb_int, error_5;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -305,8 +328,7 @@ function fetchRepoReadme(username, repo) {
                     if (test === 0) {
                         console.log("Readme for ".concat(username, "/").concat(repo, ": No readme found"));
                     }
-                    rampup = calcRampUpScore(size_kb_int);
-                    console.log("Rampup time for ".concat(username, "/").concat(repo, ": ").concat(rampup.toFixed(5)));
+                    rampup = calcRampUpScore(size_kb_int); // calculate rampup time
                     return [3 /*break*/, 3];
                 case 2:
                     error_5 = _a.sent();
@@ -317,25 +339,234 @@ function fetchRepoReadme(username, repo) {
         });
     });
 }
-function get_git_info(gitDetails) {
+function fetchTsAndJsFiles(username, repo) {
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var i, gitInfo, error_6;
+        var limitFiles, charsAccumulated, filesCounted, repoInfo, defaultBranch, response, tsAndJsFiles, fileCount, dirPath, _i, tsAndJsFiles_1, file, fileResponse, fileContent, fileContentDecoded, length_1, fileName, error_6;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    _d.trys.push([0, 7, , 8]);
+                    limitFiles = 25000;
+                    charsAccumulated = 0;
+                    filesCounted = 0;
+                    return [4 /*yield*/, fetchRepoInfo(username, repo)];
+                case 1:
+                    repoInfo = _d.sent();
+                    defaultBranch = (_a = repoInfo === null || repoInfo === void 0 ? void 0 : repoInfo.data) === null || _a === void 0 ? void 0 : _a.default_branch;
+                    if (!defaultBranch) {
+                        console.error("Failed to fetch default branch for ".concat(username, "/").concat(repo));
+                        return [2 /*return*/];
+                    }
+                    return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/git/trees/{tree_sha}", {
+                            owner: username,
+                            repo: repo,
+                            tree_sha: defaultBranch,
+                            recursive: "1",
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
+                        })];
+                case 2:
+                    response = _d.sent();
+                    tsAndJsFiles = response.data.tree.filter(function (file) {
+                        var _a;
+                        var eslintFiles = [
+                            '.eslintrc',
+                            '.eslintrc.js',
+                            '.eslintrc.json',
+                            '.eslintrc.yaml',
+                            '.eslintrc.yml',
+                            '.eslintignore',
+                            '.commitlintrc.js'
+                        ];
+                        if (eslintFiles.includes(((_a = file.path) === null || _a === void 0 ? void 0 : _a.split('/').pop()) || ''))
+                            return false; // skip eslint files
+                        return (file.type === "blob" && file.path && (file.path.endsWith(".ts") || file.path.endsWith(".js")));
+                    });
+                    fileCount = tsAndJsFiles.length;
+                    dirPath = "./temp_linter_test/".concat(repo);
+                    createLintDirs(username, repo);
+                    _i = 0, tsAndJsFiles_1 = tsAndJsFiles;
+                    _d.label = 3;
+                case 3:
+                    if (!(_i < tsAndJsFiles_1.length)) return [3 /*break*/, 6];
+                    file = tsAndJsFiles_1[_i];
+                    if (!(file.type === "blob" || file.type === "file")) return [3 /*break*/, 5];
+                    return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
+                            owner: username,
+                            repo: repo,
+                            path: (_b = file.path) !== null && _b !== void 0 ? _b : '',
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
+                        })];
+                case 4:
+                    fileResponse = _d.sent();
+                    if ('content' in fileResponse.data) {
+                        fileContent = fileResponse.data.content;
+                        fileContentDecoded = Buffer.from(fileContent, 'base64').toString('utf8');
+                        length_1 = fileContentDecoded.length;
+                        charsAccumulated += length_1;
+                        if (length_1 === 0 || length_1 < 1000) {
+                            return [3 /*break*/, 5]; // skip empty files and files less than 100 characters
+                        }
+                        fileName = (_c = file.path) === null || _c === void 0 ? void 0 : _c.split('/').pop();
+                        if (!fileName) {
+                            console.error("Failed to get file name for ".concat(username, "/").concat(repo, "/").concat(file.path));
+                            return [3 /*break*/, 5];
+                        }
+                        fs.writeFileSync("".concat(dirPath, "/").concat(fileName), fileContentDecoded);
+                        filesCounted++;
+                        if (charsAccumulated > limitFiles) {
+                            return [3 /*break*/, 6];
+                        }
+                    }
+                    else {
+                        console.error("Failed to get file content for ".concat(username, "/").concat(repo, "/").concat(file.path));
+                    }
+                    _d.label = 5;
+                case 5:
+                    _i++;
+                    return [3 /*break*/, 3];
+                case 6: return [2 /*return*/, filesCounted];
+                case 7:
+                    error_6 = _d.sent();
+                    console.error("Failed to fetch TS and JS files for ".concat(username, "/").concat(repo, ": ").concat(error_6));
+                    return [3 /*break*/, 8];
+                case 8: return [2 /*return*/];
+            }
+        });
+    });
+}
+function createLintDirs(username, repo) {
+    return __awaiter(this, void 0, void 0, function () {
+        var appendRepo, subDir, esLintconfig, config;
+        return __generator(this, function (_a) {
+            appendRepo = "/".concat(repo);
+            subDir = "./temp_linter_test".concat(appendRepo);
+            ensureDirectoryExistence(subDir);
+            esLintconfig = "/* eslint-env node */\nmodule.exports = {\n    extends: ['eslint:recommended'],\n    \"parserOptions\": {\n        \"ecmaVersion\": 5,\n    },\n    \"overrides\": [\n        {\n            \"files\": [\"*.ts\", \"*.tsx\"],\n            \"parser\": \"@typescript-eslint/parser\",\n            \"plugins\": ['@typescript-eslint'],\n            \"extends\": [\n                \"plugin:@typescript-eslint/recommended\",\n            ],\n        }\n    ],\n    root: true,\n};\n    ";
+            config = esLintconfig.trim();
+            fs.writeFileSync("".concat(subDir, "/.eslintrc.cjs"), config);
+            return [2 /*return*/];
+        });
+    });
+}
+function fetchLintOutput(username, repo) {
+    return __awaiter(this, void 0, void 0, function () {
+        var subDir, fileCount, errors, error_7;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    subDir = "./temp_linter_test/".concat(repo);
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 4, , 5]);
+                    return [4 /*yield*/, fetchTsAndJsFiles(username, repo)];
+                case 2:
+                    fileCount = _a.sent();
+                    if (!fileCount) {
+                        fileCount = 0;
+                        console.log("No TS or JS files found for ".concat(username, "/").concat(repo));
+                        process.exit(1);
+                    }
+                    return [4 /*yield*/, runEslint(subDir)];
+                case 3:
+                    _a.sent();
+                    if (!fs.existsSync("".concat(subDir, "/result.json"))) {
+                        //correctness = 1; // if we dont have a result.json file, we will assume the code is correct
+                        correctness = calcCorrectnessScore(0, fileCount);
+                        return [2 /*return*/];
+                    }
+                    errors = getErrorAndWarningCount("".concat(subDir, "/result.json")).errors;
+                    correctness = calcCorrectnessScore(errors, fileCount);
+                    return [3 /*break*/, 5];
+                case 4:
+                    error_7 = _a.sent();
+                    console.error("Failed to get lint output for ".concat(username, "/").concat(repo, ": ").concat(error_7.message));
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/];
+            }
+        });
+    });
+}
+function getErrorAndWarningCount(filepath) {
+    var file = fs.readFileSync(filepath, 'utf8');
+    var lines = file.trim().split('\n');
+    for (var i = lines.length - 1; i >= 0; i--) {
+        var line = lines[i];
+        if (line.startsWith('✖')) {
+            var errorMatch = line.match(/(\d+) error/);
+            var errors = errorMatch ? parseInt(errorMatch[1], 10) : 0;
+            return { errors: errors };
+        }
+    }
+    return { errors: 0 };
+}
+function fetchRepoIssues(username, repo) {
+    return __awaiter(this, void 0, void 0, function () {
+        var timeDifference_1, response, error_8;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    timeDifference_1 = [];
+                    return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/issues", {
+                            owner: username,
+                            repo: repo,
+                            state: "all",
+                            headers: {
+                                'X-GitHub-Api-Version': '2022-11-28',
+                            },
+                        })];
+                case 1:
+                    response = _a.sent();
+                    if (response.data.length === 0) {
+                        console.log("No issues found for ".concat(username, "/").concat(repo));
+                        return [2 /*return*/];
+                    }
+                    response.data.forEach(function (issue) {
+                        var createdAt = new Date(issue.created_at);
+                        var closedAt;
+                        if (issue.closed_at) {
+                            closedAt = new Date(issue.closed_at);
+                            var difference = closedAt.valueOf() - createdAt.valueOf();
+                            timeDifference_1.push(difference);
+                        }
+                        else {
+                            closedAt = null;
+                        }
+                    });
+                    calcRespMaintScore(timeDifference_1, username, repo);
+                    return [3 /*break*/, 3];
+                case 2:
+                    error_8 = _a.sent();
+                    console.error("Failed to get issues for ".concat(username, "/").concat(repo));
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
+function get_metric_info(gitDetails) {
+    return __awaiter(this, void 0, void 0, function () {
+        var i, gitInfo, error_9;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < gitDetails.length)) return [3 /*break*/, 9];
+                    if (!(i < gitDetails.length)) return [3 /*break*/, 11];
                     gitInfo = gitDetails[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 7, , 8]);
-                    console.log("\nGetting Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    console.log("----------------------------------------");
-                    console.log("\n");
-                    return [4 /*yield*/, fetchRepoInfo(gitInfo.username, gitInfo.repo)];
+                    _a.trys.push([2, 9, , 10]);
+                    //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
+                    return [4 /*yield*/, createLintDirs(gitInfo.username, gitInfo.repo)];
                 case 3:
+                    //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
                     _a.sent();
                     return [4 /*yield*/, fetchRepoContributors(gitInfo.username, gitInfo.repo)];
                 case 4:
@@ -346,28 +577,35 @@ function get_git_info(gitDetails) {
                     return [4 /*yield*/, fetchRepoReadme(gitInfo.username, gitInfo.repo)];
                 case 6:
                     _a.sent();
-                    console.log("\n");
-                    return [3 /*break*/, 8];
+                    return [4 /*yield*/, fetchLintOutput(gitInfo.username, gitInfo.repo)];
                 case 7:
-                    error_6 = _a.sent();
-                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    return [3 /*break*/, 8];
+                    _a.sent();
+                    return [4 /*yield*/, fetchRepoIssues(gitInfo.username, gitInfo.repo)];
                 case 8:
+                    _a.sent();
+                    calcTotalScore(busFactor, rampup, license, correctness, maintainer);
+                    outputResults(gitDetails, maintainer, busFactor, rampup, license, correctness, score);
+                    return [3 /*break*/, 10];
+                case 9:
+                    error_9 = _a.sent();
+                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    return [3 /*break*/, 10];
+                case 10:
                     i++;
                     return [3 /*break*/, 1];
-                case 9: return [2 /*return*/];
+                case 11: return [2 /*return*/];
             }
         });
     });
 }
 //////////////////////////////////////////////////////////////////////
 // now actual metric score calculations
-function calculateBusFactor(x) {
-    var result = Math.pow((Math.log(x + 1) / (Math.log(1500 + 1))), 1.22);
+function calcuBusFactor(x) {
+    var result = (Math.pow((Math.log(x + 1) / (Math.log(1500 + 1))), 1.22));
     return result;
 }
 function calcRampUpScore(x) {
-    var result = 1 - (Math.pow((Math.log(x + 1) / (Math.log(847248 + 1))), 1.22));
+    var result = (1 - (Math.pow((Math.log(x + 1) / (Math.log(105906 + 1))), 1.22)));
     return result;
 }
 function calcLicenseScore(x) {
@@ -380,14 +618,96 @@ function calcLicenseScore(x) {
     }
     return licenseScore;
 }
+function calcCorrectnessScore(errors, filecount) {
+    // lets get the errors/warnings per file
+    // we really only care about errors
+    var errorsPerFile = errors / filecount;
+    var scaledError = 0;
+    var correctnessScore = 0;
+    if (errorsPerFile > 1 && errorsPerFile < 10) {
+        scaledError = errorsPerFile / 10;
+    }
+    else if (errorsPerFile > 10 && errorsPerFile < 100) {
+        scaledError = errorsPerFile / 100;
+    }
+    else if (errorsPerFile > 100) { // if we have 100 errors per file this is not good 
+        scaledError = 1;
+    }
+    if (scaledError === 1) { // we got way too many errors per file, cannot be a good file
+        correctnessScore = 0;
+    }
+    else {
+        correctnessScore = (1 - (scaledError));
+    }
+    return correctnessScore;
+}
+function calcRespMaintScore(timeDifference, username, repo) {
+    var sum = timeDifference.reduce(function (acc, value) { return acc + value; }, 0);
+    var avg = sum / timeDifference.length;
+    var maintainer = (1 - (avg / (86400000 * 30)));
+    return maintainer;
+}
+function calcTotalScore(busFactor, rampup, license, correctness, maintainer) {
+    /*
+    Sarah highest priority is is not enough maintainers, we tie this into the responsive maintainer score
+    responsive ^
+    bus factor
+        important as we dont want package to die when one person leaves
+    ramp up
+        she explicitly wants a good ramp up score so engineers can work with the package easier
+    */
+    var busWeight = 0.10;
+    var rampupWeight = 0.20;
+    var respMaintWeight = 0.30;
+    var correctnessWeight = 0.40;
+    var busScore = busFactor * busWeight;
+    var rampupScore = rampup * rampupWeight;
+    var respMaintScore = maintainer * respMaintWeight;
+    var correctnessScore = correctness * correctnessWeight;
+    var score = busScore + rampupScore + respMaintScore + correctnessScore;
+}
+function outputResults(gitDetails, maintainer, busFactor, rampup, license, correctness, totalScore) {
+    var urls = gitDetails.map(function (detail) { return "https://github.com/".concat(detail.username, "/").concat(detail.repo); });
+    var data = [
+        {
+            "RESPONSIVE_MAINTAINER_SCORE": "",
+            "BUS_FACTOR_SCORE": "",
+            "RAMP_UP_SCORE": "",
+            "LICENSE_SCORE": 0,
+            "CORRECTNESS_SCORE": "",
+            "TOTAL_SCORE": "",
+            "URLS": ""
+        },
+    ];
+    for (var i = 0; i < urls.length; i++) {
+        data = [
+            {
+                "RESPONSIVE_MAINTAINER_SCORE": maintainer.toFixed(5),
+                "BUS_FACTOR_SCORE": busFactor.toFixed(5),
+                "RAMP_UP_SCORE": rampup.toFixed(5),
+                "LICENSE_SCORE": license,
+                "CORRECTNESS_SCORE": correctness.toFixed(5),
+                "TOTAL_SCORE": totalScore.toFixed(5),
+                "URLS": urls[i]
+            },
+        ];
+        console.log(JSON.stringify(data));
+    }
+}
 //////////////////////////////////////////////////////////////////////
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var _i, dependencies_1, pkg, filename, urls;
+        var delay, _i, dependencies_1, pkg, filename, urls;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!(arg == "install")) return [3 /*break*/, 1];
+                    ensureDirectoryExistence('./temp_linter_test'); // make temp directory for linter test files
+                    ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
+                    delay = function (ms) { return new Promise(function (res) { return setTimeout(res, ms); }); };
+                    return [4 /*yield*/, delay(1000)];
+                case 1:
+                    _a.sent(); // wait 1 second
+                    if (!(arg == "install")) return [3 /*break*/, 2];
                     for (_i = 0, dependencies_1 = dependencies; _i < dependencies_1.length; _i++) {
                         pkg = dependencies_1[_i];
                         try {
@@ -400,14 +720,14 @@ function main() {
                     }
                     console.log("".concat(dependencies.length, " dependencies installed...\n"));
                     process.exit(0);
-                    return [3 /*break*/, 6];
-                case 1:
-                    if (!(arg == "test")) return [3 /*break*/, 2];
+                    return [3 /*break*/, 7];
+                case 2:
+                    if (!(arg == "test")) return [3 /*break*/, 3];
                     console.log("Run test suite...\n");
                     process.exit(0);
-                    return [3 /*break*/, 6];
-                case 2:
-                    if (!(arg == "test.txt")) return [3 /*break*/, 5];
+                    return [3 /*break*/, 7];
+                case 3:
+                    if (!/\.txt$/.test(arg)) return [3 /*break*/, 6];
                     filename = arg;
                     urls = url_list(filename);
                     if (urls.length === 0) {
@@ -417,7 +737,7 @@ function main() {
                     urls.forEach(function (url) {
                         var npmPackageName = get_npm_package_name(url); // get package name 
                         var gitInfo = get_github_info(url); // get github info
-                        if (npmPackageName) {
+                        if (npmPackageName) { // since they return the package name or null, we can check for null
                             npmPkgName.push(npmPackageName); // push to package name array
                         }
                         else if (gitInfo) {
@@ -428,18 +748,18 @@ function main() {
                         }
                     });
                     return [4 /*yield*/, get_npm_package_json(npmPkgName)];
-                case 3:
-                    _a.sent();
-                    return [4 /*yield*/, get_git_info(gitDetails)];
                 case 4:
                     _a.sent();
-                    process.exit(0);
-                    return [3 /*break*/, 6];
+                    return [4 /*yield*/, get_metric_info(gitDetails)];
                 case 5:
+                    _a.sent();
+                    process.exit(0);
+                    return [3 /*break*/, 7];
+                case 6:
                     console.log("Invalid command...\n");
                     process.exit(1);
-                    _a.label = 6;
-                case 6: return [2 /*return*/];
+                    _a.label = 7;
+                case 7: return [2 /*return*/];
             }
         });
     });

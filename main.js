@@ -584,7 +584,6 @@ function get_metric_info(gitDetails) {
                 case 8:
                     _a.sent();
                     calcTotalScore(busFactor, rampup, license, correctness, maintainer);
-                    outputResults(gitDetails, maintainer, busFactor, rampup, license, correctness, score);
                     return [3 /*break*/, 10];
                 case 9:
                     error_9 = _a.sent();
@@ -668,30 +667,17 @@ function calcTotalScore(busFactor, rampup, license, correctness, maintainer) {
 }
 function outputResults(gitDetails, maintainer, busFactor, rampup, license, correctness, totalScore) {
     var urls = gitDetails.map(function (detail) { return "https://github.com/".concat(detail.username, "/").concat(detail.repo); });
-    var data = [
-        {
-            "RESPONSIVE_MAINTAINER_SCORE": "",
-            "BUS_FACTOR_SCORE": "",
-            "RAMP_UP_SCORE": "",
-            "LICENSE_SCORE": 0,
-            "CORRECTNESS_SCORE": "",
-            "TOTAL_SCORE": "",
-            "URLS": ""
-        },
-    ];
     for (var i = 0; i < urls.length; i++) {
-        data = [
-            {
-                "RESPONSIVE_MAINTAINER_SCORE": maintainer.toFixed(5),
-                "BUS_FACTOR_SCORE": busFactor.toFixed(5),
-                "RAMP_UP_SCORE": rampup.toFixed(5),
-                "LICENSE_SCORE": license,
-                "CORRECTNESS_SCORE": correctness.toFixed(5),
-                "TOTAL_SCORE": totalScore.toFixed(5),
-                "URLS": urls[i]
-            },
-        ];
-        console.log(JSON.stringify(data));
+        var repoData = {
+            URL: urls[i],
+            NET_SCORE: totalScore.toFixed(5),
+            RAMP_UP_SCORE: rampup.toFixed(5),
+            CORRECTNESS_SCORE: correctness.toFixed(5),
+            BUS_FACTOR_SCORE: busFactor.toFixed(5),
+            LICENSE_SCORE: license,
+            RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
+        };
+        console.log(JSON.stringify(repoData));
     }
 }
 //////////////////////////////////////////////////////////////////////
@@ -753,6 +739,7 @@ function main() {
                     return [4 /*yield*/, get_metric_info(gitDetails)];
                 case 5:
                     _a.sent();
+                    outputResults(gitDetails, maintainer, busFactor, rampup, license, correctness, score);
                     process.exit(0);
                     return [3 /*break*/, 7];
                 case 6:

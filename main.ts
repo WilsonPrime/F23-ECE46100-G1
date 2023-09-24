@@ -499,7 +499,6 @@ async function get_metric_info(gitDetails: { username: string, repo: string }[])
             await fetchLintOutput(gitInfo.username, gitInfo.repo);
             await fetchRepoIssues(gitInfo.username, gitInfo.repo);
             calcTotalScore(busFactor, rampup, license, correctness, maintainer);
-            outputResults(gitDetails,maintainer, busFactor, rampup, license, correctness, score);
           
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
@@ -598,36 +597,42 @@ function calcTotalScore(busFactor: number, rampup: number, license: number, corr
     
 }
 
-function outputResults(gitDetails: { username: string, repo: string }[],maintainer: number, busFactor: number, rampup: number, license: number, correctness: number, totalScore: number) {
+interface RepoData {
+    URL: string;
+    NET_SCORE: string;
+    RAMP_UP_SCORE: string;
+    CORRECTNESS_SCORE: string;
+    BUS_FACTOR_SCORE: string;
+    LICENSE_SCORE: number;
+    RESPONSIVE_MAINTAINER_SCORE: string;
+}
+
+function outputResults(
+    gitDetails: { username: string; repo: string }[],
+    maintainer: number,
+    busFactor: number,
+    rampup: number,
+    license: number,
+    correctness: number,
+    totalScore: number
+) {
+    const urls: string[] = gitDetails.map(
+        (detail) => `https://github.com/${detail.username}/${detail.repo}`
+    );
     
-    const urls: string[] = gitDetails.map(detail => `https://github.com/${detail.username}/${detail.repo}`);
-    let data = [
-        {
-            "RESPONSIVE_MAINTAINER_SCORE": "",
-            "BUS_FACTOR_SCORE": "",
-            "RAMP_UP_SCORE": "",
-            "LICENSE_SCORE": 0,
-            "CORRECTNESS_SCORE": "",
-            "TOTAL_SCORE": "",
-            "URLS": ""
-        },
-    ];
     for (let i = 0; i < urls.length; i++) {
-        data = [
-            {
-                "RESPONSIVE_MAINTAINER_SCORE": maintainer.toFixed(5),
-                "BUS_FACTOR_SCORE": busFactor.toFixed(5),
-                "RAMP_UP_SCORE": rampup.toFixed(5),
-                "LICENSE_SCORE": license,
-                "CORRECTNESS_SCORE": correctness.toFixed(5),
-                "TOTAL_SCORE": totalScore.toFixed(5),
-                "URLS": urls[i]
-            },
-        ]; 
-        console.log(JSON.stringify(data));
+        const repoData: RepoData = {
+            URL: urls[i],
+            NET_SCORE: totalScore.toFixed(5),
+            RAMP_UP_SCORE: rampup.toFixed(5),
+            CORRECTNESS_SCORE: correctness.toFixed(5),
+            BUS_FACTOR_SCORE: busFactor.toFixed(5),
+            LICENSE_SCORE: license,
+            RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
+        };
+        console.log(JSON.stringify(repoData));
     }
-   
-   
+    
 }
 //////////////////////////////////////////////////////////////////////
 
@@ -682,6 +687,7 @@ async function main() {
 
         await get_npm_package_json(npmPkgName);
         await get_metric_info(gitDetails);
+        outputResults(gitDetails,maintainer, busFactor, rampup, license, correctness, score);
 
         process.exit(0);
 

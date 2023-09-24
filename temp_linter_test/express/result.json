@@ -1,0 +1,22 @@
+
+C:\Users\devon\OneDrive\Documents\fresh_soft_eng\temp_linter_test\express\boot.js
+   7:15  error  'require' is not defined    no-undef
+   8:10  error  'require' is not defined    no-undef
+   9:12  error  'require' is not defined    no-undef
+  11:1   error  'module' is not defined     no-undef
+  12:23  error  '__dirname' is not defined  no-undef
+  17:16  error  'console' is not defined    no-undef
+  18:15  error  'require' is not defined    no-undef
+  19:9   error  'name' is already defined   no-redeclare
+  28:32  error  '__dirname' is not defined  no-undef
+  73:20  error  'console' is not defined    no-undef
+  76:20  error  'console' is not defined    no-undef
+
+C:\Users\devon\OneDrive\Documents\fresh_soft_eng\temp_linter_test\express\index.js
+  14:15  error  'require' is not defined  no-undef
+  15:14  error  'require' is not defined  no-undef
+  16:13  error  'require' is not defined  no-undef
+  58:6   error  'module' is not defined   no-undef
+  60:3   error  'console' is not defined  no-undef
+
+✖ 16 problems (16 errors, 0 warnings)

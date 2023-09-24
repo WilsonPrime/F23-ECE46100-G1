@@ -9,7 +9,7 @@ const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get use
 const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
 const npmPkgName: string[] = []; // setup array for package names
 const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
-const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript", "--save-dev typescript jest @types/jest ts-jest"]; // setup array for dependencies
+const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript"]; // setup array for dependencies
 const gitUrls: string[] = []; // setup array for git urls
 
 // could probably put in array but,"kiss"
@@ -136,7 +136,7 @@ const readJSON = (jsonPath: string, callback: (data: Record<string, unknown> | n
   };
   
 
-export function check_npm_for_open_source(filePath: string): Promise<string | null> {
+function check_npm_for_open_source(filePath: string): Promise<string | null> {
     return new Promise((resolve) => {
       readJSON(filePath, (jsonData) => {
         if (jsonData !== null) {
@@ -194,7 +194,7 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
 //////////////////////////////////////////////////////////////////////
 // here we are getting everything we need for our metrics from the api  (contributors, license, readme, issues, etc)
 
-async function fetchRepoInfo(username: string, repo:string ) { 
+async function fetchRepoInfo(username: string,repo: string) { 
     try { 
         const repo_info = await octokit.request("GET /repos/{owner}/{repo}", {
             owner: username,
@@ -221,8 +221,8 @@ async function fetchRepoContributors(username: string, repo: string) {
         busFactor = calcuBusFactor(numberOfContributors);
         
     
-    } catch (error: any) { 
-        console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error.message);
+    } catch (error) { 
+        console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error);
     }
 }
 
@@ -428,8 +428,8 @@ async function fetchLintOutput(username: string, repo: string) {
         correctness = calcCorrectnessScore(errors,fileCount);
         
 
-    } catch (error: any) {
-        console.error(`Failed to get lint output for ${username}/${repo}: ${error.message}`);
+    } catch (error) {
+        console.error(`Failed to get lint output for ${username}/${repo}: ${error}`);
     }
 }
 
@@ -490,7 +490,7 @@ async function get_metric_info(gitDetails: { username: string, repo: string }[])
     for (let i = 0; i < gitDetails.length; i++) {
         const gitInfo = gitDetails[i];
         try {
-         
+            console.log(`Getting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
             //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
             await createLintDirs(gitInfo.username, gitInfo.repo);
             await fetchRepoContributors(gitInfo.username, gitInfo.repo);
@@ -499,6 +499,7 @@ async function get_metric_info(gitDetails: { username: string, repo: string }[])
             await fetchLintOutput(gitInfo.username, gitInfo.repo);
             await fetchRepoIssues(gitInfo.username, gitInfo.repo);
             calcTotalScore(busFactor, rampup, license, correctness, maintainer);
+            console.log(`~~~~~~~~~~~~~~~~\n`);
           
         } catch (error) {
             console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
@@ -518,12 +519,14 @@ async function get_metric_info(gitDetails: { username: string, repo: string }[])
 
 function calcuBusFactor(x: number): number {
     const result = (Math.pow((Math.log(x + 1) / (Math.log(1500+1))), 1.22));
+    console.log(`Bus Factor: ${result}`);
     return result;
   }
 
 
 function calcRampUpScore(x: number): number {
     const result = (1 - (Math.pow((Math.log(x + 1) / (Math.log(105906+1))), 1.22)));
+    console.log(`Ramp Up: ${result}`);
     return result;
 }
 
@@ -534,6 +537,7 @@ function calcLicenseScore(x: string): number {
     } else { 
         licenseScore = 0;
     }
+    console.log(`License: ${licenseScore}`);
     return licenseScore;
 }
 
@@ -562,7 +566,7 @@ function calcCorrectnessScore(errors: number, filecount: number) {
         correctnessScore = (1 - (scaledError));
     }
    
-   
+   console.log(`Correctness: ${correctnessScore}`);
     return correctnessScore;
 }
 
@@ -571,6 +575,8 @@ function calcRespMaintScore(timeDifference: number[], username: string, repo: st
     const sum = timeDifference.reduce((acc, value) => acc + value, 0);
     const avg = sum / timeDifference.length;
     const maintainer = (1 - (avg / (86400000 * 30)));
+
+    console.log(`Responsive Maintainer: ${maintainer}`);
     
     return maintainer;
 }
@@ -593,6 +599,7 @@ function calcTotalScore(busFactor: number, rampup: number, license: number, corr
     const respMaintScore = maintainer * respMaintWeight;
     const correctnessScore = correctness * correctnessWeight;
     const score = busScore + rampupScore + respMaintScore + correctnessScore;
+    console.log(`Total Score: ${score}`);
 
     
 }
@@ -606,7 +613,7 @@ interface RepoData {
     LICENSE_SCORE: number;
     RESPONSIVE_MAINTAINER_SCORE: string;
 }
-
+/*
 function outputResults(
     gitDetails: { username: string; repo: string }[],
     maintainer: number,
@@ -634,6 +641,7 @@ function outputResults(
     }
     
 }
+*/
 //////////////////////////////////////////////////////////////////////
 
 async function main() { 
@@ -662,23 +670,6 @@ async function main() {
         process.exit(0);
     } else if (arg == "test") {
         console.log("Run test suite...\n");
-
-        const command = 'npm test -- --coverage';
-        
-        exec(command, (error: any, stdout: any, stderr: any) => {
-            if (error) {
-              console.error(`npm test error: ${error.message}`);
-              return;
-            }
-          
-            if (stderr) {
-              console.error(`Command execution failed: ${stderr}`);
-            }
-          
-            console.log(`${stdout}`);
-          });
-
-
         process.exit(0);
 
     
@@ -704,7 +695,7 @@ async function main() {
 
         await get_npm_package_json(npmPkgName);
         await get_metric_info(gitDetails);
-        outputResults(gitDetails,maintainer, busFactor, rampup, license, correctness, score);
+       
 
         process.exit(0);
 

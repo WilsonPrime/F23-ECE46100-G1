@@ -1,7 +1,7 @@
 import { Octokit, App } from "octokit"; // Octokit v17
 import * as fs from 'fs'; // use filesystem
 import { execSync } from 'child_process'; // to execute shell cmds
-const { exec } = require('child_process'); // to execute shell cmds
+const { exec } = require('child_process'); // to execute shell cmds async version
 
 
 const npmRegex = /https:\/\/www\.npmjs\.com\/package\/([\w-]+)/i; // regex to get package name from npm url
@@ -9,21 +9,21 @@ const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get use
 const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
 const npmPkgName: string[] = []; // setup array for package names
 const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
-const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript"]; // setup array for dependencies
+const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint"]; // setup array for dependencies
 const gitUrls: string[] = []; // setup array for git urls
 
 // could probably put in array but,"kiss"
-const mit = "MIT";
-const apache = "Apache";
-const gpl = "GPL";
-const bsd = "BSD"; 
+const mit = "MIT" || "mit";
+const apache = "Apache" || "apache";
+const gpl = "GPL" || "gpl";
+const bsd = "BSD" || "bsd"; 
 
-let rampup = 0;
-let license = 0;
-let correctness = 0;
-let maintainer = 0;
-let busFactor = 0;
-let score = 0;
+
+// to be read from .env...
+let gitHubToken: string = "";
+let logLevel: number = 1;
+let logFilePath: string = "";
+// if log file already exists, delete it so we can start fresh
 
 
 
@@ -34,9 +34,16 @@ function ensureDirectoryExistence(directory: string): void {
     }
 }
 
+// read .env file and store keys in global variables
+const envFileContents = fs.readFileSync('.env', 'utf-8');
+const lines = envFileContents.split('\n');
+gitHubToken = lines[0].split('=')[1];
+logLevel = parseInt(lines[1].split('=')[1]), 10;
+logFilePath = lines[2].split('=')[1];
+
 // octokit setup
 const octokit = new Octokit({ 
-    auth: '', // github token
+    auth: gitHubToken, // github token
     userAgent: 'pkg-manager/v1.0.0'
 });
 
@@ -73,7 +80,10 @@ const url_list = (filename:string): string[] => {
     try { 
         return fs.readFileSync(filename, 'utf8').split(/\r?\n/).filter(Boolean); 
     } catch (error) { 
-        console.error(`File does not exist`);
+        //console.error(`File does not exist`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, "URL file does not exist.\n", (err)=>{});
+        }
         process.exit(1);  
     }
 }
@@ -120,7 +130,10 @@ const get_github_info = (gitUrl: string): { username: string, repo: string} | nu
 const readJSON = (jsonPath: string, callback: (data: Record<string, unknown> | null) => void) => {
     fs.readFile(jsonPath, 'utf-8', (err, data) => {
       if (err) {
-        console.error('Error reading file:', err);
+        //console.error('Error reading file:', err);
+        if (logLevel == 2) {
+            fs.appendFile(logFilePath, `Error reading file: ${err}\n`, (err)=>{});
+        }
         callback(null); // Pass null to the callback to indicate an error
         return;
       }
@@ -129,7 +142,10 @@ const readJSON = (jsonPath: string, callback: (data: Record<string, unknown> | n
         const jsonData = JSON.parse(data);
         callback(jsonData); // Pass the parsed JSON data to the callback
       }catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
+        //console.error('Error parsing JSON:', parseError);
+        if(logLevel == 2){ 
+            fs.appendFile(logFilePath, `Error parsing JSON: ${parseError}\n`, (err)=>{});
+        }
         callback(null); // Pass null to the callback to indicate an error
       }
     });
@@ -158,11 +174,17 @@ function check_npm_for_open_source(filePath: string): Promise<string | null> {
             gitUrls.push(gitUrl);
             resolve(gitUrl);
           } else {
-            console.log('No git repository found.');
+            //console.error('No git repository found.');
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `No git repository found.\n`, (err)=>{});
+            }
             resolve("Invalid");
           }
         } else {
-          console.error('Failed to read or parse JSON.');
+          //console.error('Failed to read or parse JSON.');
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Failed to read or parse JSON.\n`, (err)=>{});
+            }
           resolve(null);
         }
       });
@@ -174,7 +196,7 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
     for (let i = 0; i < pkgName.length; i++) {
         const pkg = pkgName[i];
         try {
-            const output = execSync(`npm view ${pkg} --json`, { encoding: 'utf8' }); // shell cmd to get json
+            const output = execSync(`npm view ${pkg} --json --silent`, { encoding: 'utf8' }); // shell cmd to get json
             fs.writeFileSync(`./temp_npm_json/${pkg}_info.json`, output); // write json to file
             const file = `./temp_npm_json/${pkg}_info.json`; // file path
             const gitURLfromNPM = await check_npm_for_open_source(file);
@@ -185,7 +207,10 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
                 }
             }
         } catch (error) {
-            console.error(`Failed to get npm info for package: ${pkg}`);
+            //console.error(`Failed to get npm info for package: ${pkg}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Failed to get npm info for package: ${pkg}\n`, (err)=>{});
+            }
         }
     }
 }
@@ -203,11 +228,14 @@ async function fetchRepoInfo(username: string,repo: string) {
 
         return repo_info;
     } catch (error) { 
-        console.error(`Failed to get repo info for ${username}/${repo}`);
+        //console.error(`Failed to get repo info for ${username}/${repo}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get repo info for ${username}/${repo}\n`, (err)=>{});
+        }
     }
 }
 
-async function fetchRepoContributors(username: string, repo: string) { 
+async function fetchRepoContributors(username: string, repo: string): Promise<number>{ 
     try {
         const repo_contributors = await octokit.paginate(`GET /repos/${username}/${repo}/contributors`, {
             per_page: 100,
@@ -218,17 +246,21 @@ async function fetchRepoContributors(username: string, repo: string) {
         });
         
         const numberOfContributors = repo_contributors.length;
-        busFactor = calcuBusFactor(numberOfContributors);
+        return calcuBusFactor(numberOfContributors);
         
     
     } catch (error) { 
-        console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error);
+        //console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get repo contributors for ${username}/${repo}\n`, (err)=>{});
+        }
+        return 0; 
     }
 }
 
-async function fetchRepoLicense(username: string, repo: string) { 
+async function fetchRepoLicense(username: string, repo: string): Promise<number> { 
+    //let licenseScore = 0; // define licenseScore here
     try { 
-        let licenseScore = 0; 
         const response = await octokit.request("GET /repos/{owner}/{repo}/license", {
             owner: username,
             repo: repo,
@@ -237,18 +269,27 @@ async function fetchRepoLicense(username: string, repo: string) {
               }
         });
 
-        license = calcLicenseScore(response.data.license?.name ?? "");
-       
-        
-       
+        if((response.data.license?.key && (response.data.license?.key != "other"))) {
+            
+            return calcLicenseScore(response.data.license.name);
+        } else { 
+            //console.error(`No license found for ${username}/${repo}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `No license found for ${username}/${repo}\r\nEither License not compatible with LGPLv2.1, or was not found in repo's license section.\n`, (err)=>{});
+            }
+            return 0;
+        }
     } catch (error) { 
-        console.error(`Failed to get repo license for ${username}/${repo}`);
-        license = 0;
+        //console.error(`Failed to get repo license for ${username}/${repo}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get repo license for ${username}/${repo} from API\n`, (err)=>{});
+        }
+        return 0;  
     }
     
 }
 
-async function fetchRepoReadme(username: string, repo: string) {
+async function fetchRepoReadme(username: string, repo: string): Promise <number> {
     try {
         const repo_readme = await octokit.request("GET /repos/{owner}/{repo}/readme", {
             owner: username,
@@ -266,12 +307,19 @@ async function fetchRepoReadme(username: string, repo: string) {
         const size_kb_int = parseInt(size_kb); // convert to int
         
         if (test === 0) {
-            console.log(`Readme for ${username}/${repo}: No readme found`);
+            //console.error(`Readme for ${username}/${repo}: No readme found`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Readme for ${username}/${repo}: No readme found\n`, (err)=>{});
+            }
         }
-        rampup = calcRampUpScore(size_kb_int); // calculate rampup time
+        return calcRampUpScore(size_kb_int); // calculate rampup time
         
     } catch (error) {
-        console.error(`Failed to get repo readme for ${username}/${repo}`);
+        //console.error(`Failed to get repo readme for ${username}/${repo}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get repo readme for ${username}/${repo}\n`, (err)=>{});
+        }
+        return 0; 
     }
 }
 
@@ -296,7 +344,10 @@ async function fetchTsAndJsFiles(username: string, repo: string)  {
         const defaultBranch = repoInfo?.data?.default_branch;
 
         if (!defaultBranch) {
-            console.error(`Failed to fetch default branch for ${username}/${repo}`);
+            //console.error(`Failed to fetch default branch for ${username}/${repo}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Failed to fetch default branch for ${username}/${repo}\n`, (err)=>{});
+            }
             return;
         }
         
@@ -359,24 +410,32 @@ async function fetchTsAndJsFiles(username: string, repo: string)  {
                     }
                     const fileName = file.path?.split('/').pop();
                     if (!fileName) {
-                        console.error(`Failed to get file name for ${username}/${repo}/${file.path}`);
+                        //console.error(`Failed to get file name for ${username}/${repo}/${file.path}`);
+                        if(logLevel == 2){
+                            fs.appendFile(logFilePath, `Failed to get file name for ${username}/${repo}/${file.path}\n`, (err)=>{});
+                        }
                         continue;
                     }
                     
                     fs.writeFileSync(`${dirPath}/${fileName}`, fileContentDecoded);
                     filesCounted++;
                     if (charsAccumulated > limitFiles) {
-
                         break;
                     }
                 } else {
-                    console.error(`Failed to get file content for ${username}/${repo}/${file.path}`);
+                    //console.error(`Failed to get file content for ${username}/${repo}/${file.path}`);
+                    if(logLevel == 2){
+                        fs.appendFile(logFilePath, `Failed to get file content for ${username}/${repo}/${file.path}\n`, (err)=>{});
+                    }
                 }
             }
         }
         return filesCounted;
     } catch (error) {
-        console.error(`Failed to fetch TS and JS files for ${username}/${repo}: ${error}`);
+        //console.error(`Failed to fetch TS and JS files for ${username}/${repo}: ${error}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to fetch TS and JS files for ${username}/${repo}\n`, (err)=>{});
+        }
     }
 
 }
@@ -408,28 +467,35 @@ module.exports = {
     fs.writeFileSync(`${subDir}/.eslintrc.cjs`, config);
 }
 
-async function fetchLintOutput(username: string, repo: string) {
+async function fetchLintOutput(username: string, repo: string): Promise<number> {
     const subDir = `./temp_linter_test/${repo}`;
     try {
         let fileCount = await fetchTsAndJsFiles(username, repo);
         if (!fileCount) {
             fileCount = 0;
-            console.log(`No TS or JS files found for ${username}/${repo}`);
+            //console.error(`No TS or JS files found for ${username}/${repo}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `No TS or JS files found for ${username}/${repo}\n`, (err)=>{});
+            }
             process.exit(1);
         }
         await runEslint(subDir);
         if (!fs.existsSync(`${subDir}/result.json`)) {
             
             //correctness = 1; // if we dont have a result.json file, we will assume the code is correct
-            correctness = calcCorrectnessScore(0,fileCount);
-            return;
+            return calcCorrectnessScore(0,fileCount);
+        
         }
         const {errors} = getErrorAndWarningCount(`${subDir}/result.json`);
-        correctness = calcCorrectnessScore(errors,fileCount);
+        return calcCorrectnessScore(errors,fileCount);
         
 
     } catch (error) {
-        console.error(`Failed to get lint output for ${username}/${repo}: ${error}`);
+        //console.error(`Failed to get lint output for ${username}/${repo}: ${error}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get lint output for ${username}/${repo}\n`, (err)=>{});
+        }
+        return 0;
     }
 }
 
@@ -464,8 +530,11 @@ async function fetchRepoIssues(username: string, repo: string) {
         });
         
         if (response.data.length === 0) {
-            console.log(`No issues found for ${username}/${repo}`);
-            return;
+            //console.error(`No issues found for ${username}/${repo}`);
+            if (logLevel == 2) {
+                fs.appendFile(logFilePath, `No issues found for ${username}/${repo}\n`, (err)=>{});
+            }
+            return 0;
         }
 
         response.data.forEach((issue) => {
@@ -480,29 +549,70 @@ async function fetchRepoIssues(username: string, repo: string) {
                 closedAt = null;
             }
         });  
-        calcRespMaintScore(timeDifference, username, repo);
+        return calcRespMaintScore(timeDifference, username, repo);
     } catch (error) {
-        console.error(`Failed to get issues for ${username}/${repo}`);
+        //console.error(`Failed to get issues for ${username}/${repo}`);
+        if(logLevel == 2){
+            fs.appendFile(logFilePath, `Failed to get issues for ${username}/${repo}\n`, (err)=>{});
+        }
+        return 0;
     }
 }
+
+interface RepoData {
+    URL: string;
+    NET_SCORE: string;
+    RAMP_UP_SCORE: string;
+    CORRECTNESS_SCORE: string;
+    BUS_FACTOR_SCORE: string;
+    LICENSE_SCORE: number;
+    RESPONSIVE_MAINTAINER_SCORE: string;
+}
+
+
+
+
+async function outputResults(username: string, repo: string, busFactor: number, rampup: number, license: number, correctness: number, maintainer: number, score: number) {
+    const url = `https://github.com/${username}/${repo}`;
+    
+    
+    const repoData: RepoData = {
+        URL: url,
+        NET_SCORE: score.toFixed(5),
+        RAMP_UP_SCORE: rampup.toFixed(5),
+        CORRECTNESS_SCORE: correctness.toFixed(5),
+        BUS_FACTOR_SCORE: busFactor.toFixed(5),
+        LICENSE_SCORE: license,
+        RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
+    };
+    console.log(JSON.stringify(repoData));
+    if(logLevel >= 1){
+        fs.appendFileSync(logFilePath, JSON.stringify(repoData) + "\n");
+    }
+}
+
 
 async function get_metric_info(gitDetails: { username: string, repo: string }[]): Promise<void> {
     for (let i = 0; i < gitDetails.length; i++) {
         const gitInfo = gitDetails[i];
         try {
-            console.log(`Getting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
+            //console.log(`Getting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
             //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
             await createLintDirs(gitInfo.username, gitInfo.repo);
-            await fetchRepoContributors(gitInfo.username, gitInfo.repo);
-            await fetchRepoLicense(gitInfo.username, gitInfo.repo); 
-            await fetchRepoReadme(gitInfo.username, gitInfo.repo);
-            await fetchLintOutput(gitInfo.username, gitInfo.repo);
-            await fetchRepoIssues(gitInfo.username, gitInfo.repo);
-            calcTotalScore(busFactor, rampup, license, correctness, maintainer);
-            console.log(`~~~~~~~~~~~~~~~~\n`);
+            const busFactor = await fetchRepoContributors(gitInfo.username, gitInfo.repo);
+            const license = await fetchRepoLicense(gitInfo.username, gitInfo.repo); 
+            const rampup = await fetchRepoReadme(gitInfo.username, gitInfo.repo);
+            const correctness = await fetchLintOutput(gitInfo.username, gitInfo.repo);
+            const maintainer = await fetchRepoIssues(gitInfo.username, gitInfo.repo);
+            let score = await calcTotalScore(busFactor, rampup, license, correctness, maintainer);
+            outputResults(gitInfo.username, gitInfo.repo, busFactor, rampup, license, correctness, maintainer, score);
+            //console.log(`~~~~~~~~~~~~~~~~\n`);
           
         } catch (error) {
-            console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
+            //console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}\n`, (err)=>{});
+            }
         }
     }
 
@@ -519,14 +629,14 @@ async function get_metric_info(gitDetails: { username: string, repo: string }[])
 
 function calcuBusFactor(x: number): number {
     const result = (Math.pow((Math.log(x + 1) / (Math.log(1500+1))), 1.22));
-    console.log(`Bus Factor: ${result}`);
+    //console.log(`Bus Factor: ${result}`);
     return result;
   }
 
 
 function calcRampUpScore(x: number): number {
     const result = (1 - (Math.pow((Math.log(x + 1) / (Math.log(105906+1))), 1.22)));
-    console.log(`Ramp Up: ${result}`);
+    //console.log(`Ramp Up: ${result}`);
     return result;
 }
 
@@ -537,7 +647,7 @@ function calcLicenseScore(x: string): number {
     } else { 
         licenseScore = 0;
     }
-    console.log(`License: ${licenseScore}`);
+    //console.log(`License: ${licenseScore}`);
     return licenseScore;
 }
 
@@ -566,7 +676,7 @@ function calcCorrectnessScore(errors: number, filecount: number) {
         correctnessScore = (1 - (scaledError));
     }
    
-   console.log(`Correctness: ${correctnessScore}`);
+   //console.log(`Correctness: ${correctnessScore}`);
     return correctnessScore;
 }
 
@@ -574,14 +684,19 @@ function calcCorrectnessScore(errors: number, filecount: number) {
 function calcRespMaintScore(timeDifference: number[], username: string, repo: string) {
     const sum = timeDifference.reduce((acc, value) => acc + value, 0);
     const avg = sum / timeDifference.length;
-    const maintainer = (1 - (avg / (86400000 * 30)));
+    let maintainer = (1 - (avg / (86400000 * 30)));
+    if (maintainer < 0) { // if average response is greater than a month 
+        maintainer = 0;
+    } else {
+        maintainer = (1 - (avg / (86400000 * 30)));
+    }
 
-    console.log(`Responsive Maintainer: ${maintainer}`);
+    //console.log(`Responsive Maintainer: ${maintainer}`);
     
     return maintainer;
 }
 
-function calcTotalScore(busFactor: number, rampup: number, license: number, correctness: number, maintainer: number) {
+async function calcTotalScore(busFactor: number, rampup: number, license: number, correctness: number, maintainer: number) {
     /*
     Sarah highest priority is is not enough maintainers, we tie this into the responsive maintainer score
     responsive ^
@@ -598,53 +713,18 @@ function calcTotalScore(busFactor: number, rampup: number, license: number, corr
     const rampupScore = rampup * rampupWeight;
     const respMaintScore = maintainer * respMaintWeight;
     const correctnessScore = correctness * correctnessWeight;
-    const score = busScore + rampupScore + respMaintScore + correctnessScore;
-    console.log(`Total Score: ${score}`);
-
-    
+    const score = license*(busScore + rampupScore + respMaintScore + correctnessScore);
+    //console.log(`Total Score: ${score.toFixed(5)}`); // can allow more or less decimal, five for now
+    return score;
 }
 
-interface RepoData {
-    URL: string;
-    NET_SCORE: string;
-    RAMP_UP_SCORE: string;
-    CORRECTNESS_SCORE: string;
-    BUS_FACTOR_SCORE: string;
-    LICENSE_SCORE: number;
-    RESPONSIVE_MAINTAINER_SCORE: string;
-}
-/*
-function outputResults(
-    gitDetails: { username: string; repo: string }[],
-    maintainer: number,
-    busFactor: number,
-    rampup: number,
-    license: number,
-    correctness: number,
-    totalScore: number
-) {
-    const urls: string[] = gitDetails.map(
-        (detail) => `https://github.com/${detail.username}/${detail.repo}`
-    );
-    
-    for (let i = 0; i < urls.length; i++) {
-        const repoData: RepoData = {
-            URL: urls[i],
-            NET_SCORE: totalScore.toFixed(5),
-            RAMP_UP_SCORE: rampup.toFixed(5),
-            CORRECTNESS_SCORE: correctness.toFixed(5),
-            BUS_FACTOR_SCORE: busFactor.toFixed(5),
-            LICENSE_SCORE: license,
-            RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
-        };
-        console.log(JSON.stringify(repoData));
-    }
-    
-}
-*/
 //////////////////////////////////////////////////////////////////////
 
 async function main() { 
+
+    if (fs.existsSync(logFilePath)) { 
+        fs.unlinkSync(logFilePath); // delete log file
+    }
 
     ensureDirectoryExistence('./temp_linter_test'); // make temp directory for linter test files
     ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
@@ -660,7 +740,10 @@ async function main() {
             try{
                 execSync(`npm install ${pkg}`);
             } catch {
-                console.error(`Error installing dependency ${pkg}`);
+                //console.error(`Error installing dependency ${pkg}`);
+                if(logLevel == 2){
+                    fs.appendFile(logFilePath, `Error installing dependency ${pkg}\n`, (err)=>{});
+                }
                 process.exit(1);
             }
 
@@ -678,7 +761,10 @@ async function main() {
         const filename = arg;
         const urls = url_list(filename); // grab urls from file. 
         if (urls.length === 0) {
-            console.log("No URLS found");
+            //console.error("No URLS found");
+            if (logLevel == 2) {
+                fs.appendFile(logFilePath, `No URLS found\n`, (err)=>{});
+            }
             process.exit(1); 
         }
         urls.forEach(url => {
@@ -689,13 +775,17 @@ async function main() {
             } else if (gitInfo) {
                 gitDetails.push(gitInfo); // push to github details array
             } else {
-                console.error("Error, invalid contents of file"); // non git or npm url
+                //console.error(`Error, invalid url: ${url}`); // non git or npm url
+                if(logLevel == 2){
+                    fs.appendFile(logFilePath, `Error, invalid url: ${url}\n`, (err)=>{});
+                }
             }
         }); 
 
         await get_npm_package_json(npmPkgName);
         await get_metric_info(gitDetails);
-       
+        fs.rmdirSync('./temp_linter_test', { recursive: true });
+        fs.rmdirSync('./temp_npm_json', { recursive: true });
 
         process.exit(0);
 
@@ -703,9 +793,5 @@ async function main() {
         console.log("Invalid command...\n")
         process.exit(1)
     }
-    //delete temp directorys
-    
-
 }
-
 main();

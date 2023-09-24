@@ -14,7 +14,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+        while (_) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -35,38 +35,43 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
+exports.__esModule = true;
 var octokit_1 = require("octokit"); // Octokit v17
 var fs = require("fs"); // use filesystem
 var child_process_1 = require("child_process"); // to execute shell cmds
-var exec = require('child_process').exec; // to execute shell cmds
+var exec = require('child_process').exec; // to execute shell cmds async version
 var npmRegex = /https:\/\/www\.npmjs\.com\/package\/([\w-]+)/i; // regex to get package name from npm url
 var gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get user/repo name  from git url
 var arg = process.argv[2]; // this is the url(s).txt arguement passed to the js executable
 var npmPkgName = []; // setup array for package names
 var gitDetails = []; // setup array for git user/repo name 
-var dependencies = ["octokit", "--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint typescript"]; // setup array for dependencies
+var dependencies = ["octokit", "--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint"]; // setup array for dependencies
 var gitUrls = []; // setup array for git urls
 // could probably put in array but,"kiss"
-var mit = "MIT";
-var apache = "Apache";
-var gpl = "GPL";
-var bsd = "BSD";
-var rampup = 0;
-var license = 0;
-var correctness = 0;
-var maintainer = 0;
-var busFactor = 0;
-var score = 0;
+var mit = "MIT" || "mit";
+var apache = "Apache" || "apache";
+var gpl = "GPL" || "gpl";
+var bsd = "BSD" || "bsd";
+// to be read from .env...
+var gitHubToken = "";
+var logLevel = 1;
+var logFilePath = "";
+// if log file already exists, delete it so we can start fresh
 //  we will destroy this directory later
 function ensureDirectoryExistence(directory) {
     if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
     }
 }
+// read .env file and store keys in global variables
+var envFileContents = fs.readFileSync('.env', 'utf-8');
+var lines = envFileContents.split('\n');
+gitHubToken = lines[0].split('=')[1];
+logLevel = parseInt(lines[1].split('=')[1]), 10;
+logFilePath = lines[2].split('=')[1];
 // octokit setup
 var octokit = new octokit_1.Octokit({
-    auth: '',
+    auth: gitHubToken,
     userAgent: 'pkg-manager/v1.0.0'
 });
 // run es lint
@@ -98,7 +103,10 @@ var url_list = function (filename) {
         return fs.readFileSync(filename, 'utf8').split(/\r?\n/).filter(Boolean);
     }
     catch (error) {
-        console.error("File does not exist");
+        //console.error(`File does not exist`);
+        if (logLevel == 2) {
+            fs.appendFile(logFilePath, "URL file does not exist.\n", function (err) { });
+        }
         process.exit(1);
     }
 };
@@ -137,7 +145,10 @@ var get_github_info = function (gitUrl) {
 var readJSON = function (jsonPath, callback) {
     fs.readFile(jsonPath, 'utf-8', function (err, data) {
         if (err) {
-            console.error('Error reading file:', err);
+            //console.error('Error reading file:', err);
+            if (logLevel == 2) {
+                fs.appendFile(logFilePath, "Error reading file: ".concat(err, "\n"), function (err) { });
+            }
             callback(null); // Pass null to the callback to indicate an error
             return;
         }
@@ -146,7 +157,10 @@ var readJSON = function (jsonPath, callback) {
             callback(jsonData); // Pass the parsed JSON data to the callback
         }
         catch (parseError) {
-            console.error('Error parsing JSON:', parseError);
+            //console.error('Error parsing JSON:', parseError);
+            if (logLevel == 2) {
+                fs.appendFile(logFilePath, "Error parsing JSON: ".concat(parseError, "\n"), function (err) { });
+            }
             callback(null); // Pass null to the callback to indicate an error
         }
     });
@@ -173,12 +187,18 @@ function check_npm_for_open_source(filePath) {
                     resolve(gitUrl);
                 }
                 else {
-                    console.log('No git repository found.');
+                    //console.error('No git repository found.');
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "No git repository found.\n", function (err) { });
+                    }
                     resolve("Invalid");
                 }
             }
             else {
-                console.error('Failed to read or parse JSON.');
+                //console.error('Failed to read or parse JSON.');
+                if (logLevel == 2) {
+                    fs.appendFile(logFilePath, "Failed to read or parse JSON.\n", function (err) { });
+                }
                 resolve(null);
             }
         });
@@ -198,7 +218,7 @@ function get_npm_package_json(pkgName) {
                     _a.label = 2;
                 case 2:
                     _a.trys.push([2, 4, , 5]);
-                    output = (0, child_process_1.execSync)("npm view ".concat(pkg, " --json"), { encoding: 'utf8' });
+                    output = (0, child_process_1.execSync)("npm view ".concat(pkg, " --json --silent"), { encoding: 'utf8' });
                     fs.writeFileSync("./temp_npm_json/".concat(pkg, "_info.json"), output); // write json to file
                     file = "./temp_npm_json/".concat(pkg, "_info.json");
                     return [4 /*yield*/, check_npm_for_open_source(file)];
@@ -213,7 +233,10 @@ function get_npm_package_json(pkgName) {
                     return [3 /*break*/, 5];
                 case 4:
                     error_1 = _a.sent();
-                    console.error("Failed to get npm info for package: ".concat(pkg));
+                    //console.error(`Failed to get npm info for package: ${pkg}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get npm info for package: ".concat(pkg, "\n"), function (err) { });
+                    }
                     return [3 /*break*/, 5];
                 case 5:
                     i++;
@@ -241,7 +264,10 @@ function fetchRepoInfo(username, repo) {
                     return [2 /*return*/, repo_info];
                 case 2:
                     error_2 = _a.sent();
-                    console.error("Failed to get repo info for ".concat(username, "/").concat(repo));
+                    //console.error(`Failed to get repo info for ${username}/${repo}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get repo info for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
@@ -264,12 +290,14 @@ function fetchRepoContributors(username, repo) {
                 case 1:
                     repo_contributors = _a.sent();
                     numberOfContributors = repo_contributors.length;
-                    busFactor = calcuBusFactor(numberOfContributors);
-                    return [3 /*break*/, 3];
+                    return [2 /*return*/, calcuBusFactor(numberOfContributors)];
                 case 2:
                     error_3 = _a.sent();
-                    console.error("Failed to get repo contributors for ".concat(username, "/").concat(repo, " due to: "), error_3);
-                    return [3 /*break*/, 3];
+                    //console.error(`Failed to get repo contributors for ${username}/${repo} due to: `, error);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get repo contributors for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
+                    return [2 /*return*/, 0];
                 case 3: return [2 /*return*/];
             }
         });
@@ -278,12 +306,11 @@ function fetchRepoContributors(username, repo) {
 function fetchRepoLicense(username, repo) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var licenseScore, response, error_4;
+        var response, error_4;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
                     _c.trys.push([0, 2, , 3]);
-                    licenseScore = 0;
                     return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/license", {
                             owner: username,
                             repo: repo,
@@ -293,13 +320,24 @@ function fetchRepoLicense(username, repo) {
                         })];
                 case 1:
                     response = _c.sent();
-                    license = calcLicenseScore((_b = (_a = response.data.license) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : "");
+                    if ((((_a = response.data.license) === null || _a === void 0 ? void 0 : _a.key) && (((_b = response.data.license) === null || _b === void 0 ? void 0 : _b.key) != "other"))) {
+                        return [2 /*return*/, calcLicenseScore(response.data.license.name)];
+                    }
+                    else {
+                        //console.error(`No license found for ${username}/${repo}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "No license found for ".concat(username, "/").concat(repo, "\r\nEither License not compatible with LGPLv2.1, or was not found in repo's license section.\n"), function (err) { });
+                        }
+                        return [2 /*return*/, 0];
+                    }
                     return [3 /*break*/, 3];
                 case 2:
                     error_4 = _c.sent();
-                    console.error("Failed to get repo license for ".concat(username, "/").concat(repo));
-                    license = 0;
-                    return [3 /*break*/, 3];
+                    //console.error(`Failed to get repo license for ${username}/${repo}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get repo license for ".concat(username, "/").concat(repo, " from API\n"), function (err) { });
+                    }
+                    return [2 /*return*/, 0];
                 case 3: return [2 /*return*/];
             }
         });
@@ -326,14 +364,19 @@ function fetchRepoReadme(username, repo) {
                     size_kb = (test / 1024).toFixed(2);
                     size_kb_int = parseInt(size_kb);
                     if (test === 0) {
-                        console.log("Readme for ".concat(username, "/").concat(repo, ": No readme found"));
+                        //console.error(`Readme for ${username}/${repo}: No readme found`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "Readme for ".concat(username, "/").concat(repo, ": No readme found\n"), function (err) { });
+                        }
                     }
-                    rampup = calcRampUpScore(size_kb_int); // calculate rampup time
-                    return [3 /*break*/, 3];
+                    return [2 /*return*/, calcRampUpScore(size_kb_int)]; // calculate rampup time
                 case 2:
                     error_5 = _a.sent();
-                    console.error("Failed to get repo readme for ".concat(username, "/").concat(repo));
-                    return [3 /*break*/, 3];
+                    //console.error(`Failed to get repo readme for ${username}/${repo}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get repo readme for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
+                    return [2 /*return*/, 0];
                 case 3: return [2 /*return*/];
             }
         });
@@ -355,7 +398,10 @@ function fetchTsAndJsFiles(username, repo) {
                     repoInfo = _d.sent();
                     defaultBranch = (_a = repoInfo === null || repoInfo === void 0 ? void 0 : repoInfo.data) === null || _a === void 0 ? void 0 : _a.default_branch;
                     if (!defaultBranch) {
-                        console.error("Failed to fetch default branch for ".concat(username, "/").concat(repo));
+                        //console.error(`Failed to fetch default branch for ${username}/${repo}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "Failed to fetch default branch for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                        }
                         return [2 /*return*/];
                     }
                     return [4 /*yield*/, octokit.request("GET /repos/{owner}/{repo}/git/trees/{tree_sha}", {
@@ -413,7 +459,10 @@ function fetchTsAndJsFiles(username, repo) {
                         }
                         fileName = (_c = file.path) === null || _c === void 0 ? void 0 : _c.split('/').pop();
                         if (!fileName) {
-                            console.error("Failed to get file name for ".concat(username, "/").concat(repo, "/").concat(file.path));
+                            //console.error(`Failed to get file name for ${username}/${repo}/${file.path}`);
+                            if (logLevel == 2) {
+                                fs.appendFile(logFilePath, "Failed to get file name for ".concat(username, "/").concat(repo, "/").concat(file.path, "\n"), function (err) { });
+                            }
                             return [3 /*break*/, 5];
                         }
                         fs.writeFileSync("".concat(dirPath, "/").concat(fileName), fileContentDecoded);
@@ -423,7 +472,10 @@ function fetchTsAndJsFiles(username, repo) {
                         }
                     }
                     else {
-                        console.error("Failed to get file content for ".concat(username, "/").concat(repo, "/").concat(file.path));
+                        //console.error(`Failed to get file content for ${username}/${repo}/${file.path}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "Failed to get file content for ".concat(username, "/").concat(repo, "/").concat(file.path, "\n"), function (err) { });
+                        }
                     }
                     _d.label = 5;
                 case 5:
@@ -432,7 +484,10 @@ function fetchTsAndJsFiles(username, repo) {
                 case 6: return [2 /*return*/, filesCounted];
                 case 7:
                     error_6 = _d.sent();
-                    console.error("Failed to fetch TS and JS files for ".concat(username, "/").concat(repo, ": ").concat(error_6));
+                    //console.error(`Failed to fetch TS and JS files for ${username}/${repo}: ${error}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to fetch TS and JS files for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
                     return [3 /*break*/, 8];
                 case 8: return [2 /*return*/];
             }
@@ -468,7 +523,10 @@ function fetchLintOutput(username, repo) {
                     fileCount = _a.sent();
                     if (!fileCount) {
                         fileCount = 0;
-                        console.log("No TS or JS files found for ".concat(username, "/").concat(repo));
+                        //console.error(`No TS or JS files found for ${username}/${repo}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "No TS or JS files found for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                        }
                         process.exit(1);
                     }
                     return [4 /*yield*/, runEslint(subDir)];
@@ -476,16 +534,17 @@ function fetchLintOutput(username, repo) {
                     _a.sent();
                     if (!fs.existsSync("".concat(subDir, "/result.json"))) {
                         //correctness = 1; // if we dont have a result.json file, we will assume the code is correct
-                        correctness = calcCorrectnessScore(0, fileCount);
-                        return [2 /*return*/];
+                        return [2 /*return*/, calcCorrectnessScore(0, fileCount)];
                     }
                     errors = getErrorAndWarningCount("".concat(subDir, "/result.json")).errors;
-                    correctness = calcCorrectnessScore(errors, fileCount);
-                    return [3 /*break*/, 5];
+                    return [2 /*return*/, calcCorrectnessScore(errors, fileCount)];
                 case 4:
                     error_7 = _a.sent();
-                    console.error("Failed to get lint output for ".concat(username, "/").concat(repo, ": ").concat(error_7));
-                    return [3 /*break*/, 5];
+                    //console.error(`Failed to get lint output for ${username}/${repo}: ${error}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get lint output for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
+                    return [2 /*return*/, 0];
                 case 5: return [2 /*return*/];
             }
         });
@@ -517,14 +576,17 @@ function fetchRepoIssues(username, repo) {
                             repo: repo,
                             state: "all",
                             headers: {
-                                'X-GitHub-Api-Version': '2022-11-28',
-                            },
+                                'X-GitHub-Api-Version': '2022-11-28'
+                            }
                         })];
                 case 1:
                     response = _a.sent();
                     if (response.data.length === 0) {
-                        console.log("No issues found for ".concat(username, "/").concat(repo));
-                        return [2 /*return*/];
+                        //console.error(`No issues found for ${username}/${repo}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "No issues found for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                        }
+                        return [2 /*return*/, 0];
                     }
                     response.data.forEach(function (issue) {
                         var createdAt = new Date(issue.created_at);
@@ -538,63 +600,93 @@ function fetchRepoIssues(username, repo) {
                             closedAt = null;
                         }
                     });
-                    calcRespMaintScore(timeDifference_1, username, repo);
-                    return [3 /*break*/, 3];
+                    return [2 /*return*/, calcRespMaintScore(timeDifference_1, username, repo)];
                 case 2:
                     error_8 = _a.sent();
-                    console.error("Failed to get issues for ".concat(username, "/").concat(repo));
-                    return [3 /*break*/, 3];
+                    //console.error(`Failed to get issues for ${username}/${repo}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get issues for ".concat(username, "/").concat(repo, "\n"), function (err) { });
+                    }
+                    return [2 /*return*/, 0];
                 case 3: return [2 /*return*/];
             }
         });
     });
 }
+function outputResults(username, repo, busFactor, rampup, license, correctness, maintainer, score) {
+    return __awaiter(this, void 0, void 0, function () {
+        var url, repoData;
+        return __generator(this, function (_a) {
+            url = "https://github.com/".concat(username, "/").concat(repo);
+            repoData = {
+                URL: url,
+                NET_SCORE: score.toFixed(5),
+                RAMP_UP_SCORE: rampup.toFixed(5),
+                CORRECTNESS_SCORE: correctness.toFixed(5),
+                BUS_FACTOR_SCORE: busFactor.toFixed(5),
+                LICENSE_SCORE: license,
+                RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5)
+            };
+            console.log(JSON.stringify(repoData));
+            if (logLevel >= 1) {
+                fs.appendFileSync(logFilePath, JSON.stringify(repoData) + "\n");
+            }
+            return [2 /*return*/];
+        });
+    });
+}
 function get_metric_info(gitDetails) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, gitInfo, error_9;
+        var i, gitInfo, busFactor, license, rampup, correctness, maintainer, score, error_9;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < gitDetails.length)) return [3 /*break*/, 11];
+                    if (!(i < gitDetails.length)) return [3 /*break*/, 12];
                     gitInfo = gitDetails[i];
                     _a.label = 2;
                 case 2:
-                    _a.trys.push([2, 9, , 10]);
-                    console.log("Getting Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
+                    _a.trys.push([2, 10, , 11]);
+                    //console.log(`Getting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
                     //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
                     return [4 /*yield*/, createLintDirs(gitInfo.username, gitInfo.repo)];
                 case 3:
+                    //console.log(`Getting Metric info for ${gitInfo.username}/${gitInfo.repo}`);
                     //await fetchRepoInfo(gitInfo.username, gitInfo.repo);
                     _a.sent();
                     return [4 /*yield*/, fetchRepoContributors(gitInfo.username, gitInfo.repo)];
                 case 4:
-                    _a.sent();
+                    busFactor = _a.sent();
                     return [4 /*yield*/, fetchRepoLicense(gitInfo.username, gitInfo.repo)];
                 case 5:
-                    _a.sent();
+                    license = _a.sent();
                     return [4 /*yield*/, fetchRepoReadme(gitInfo.username, gitInfo.repo)];
                 case 6:
-                    _a.sent();
+                    rampup = _a.sent();
                     return [4 /*yield*/, fetchLintOutput(gitInfo.username, gitInfo.repo)];
                 case 7:
-                    _a.sent();
+                    correctness = _a.sent();
                     return [4 /*yield*/, fetchRepoIssues(gitInfo.username, gitInfo.repo)];
                 case 8:
-                    _a.sent();
-                    calcTotalScore(busFactor, rampup, license, correctness, maintainer);
-                    console.log("~~~~~~~~~~~~~~~~\n");
-                    return [3 /*break*/, 10];
+                    maintainer = _a.sent();
+                    return [4 /*yield*/, calcTotalScore(busFactor, rampup, license, correctness, maintainer)];
                 case 9:
-                    error_9 = _a.sent();
-                    console.error("Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo));
-                    return [3 /*break*/, 10];
+                    score = _a.sent();
+                    outputResults(gitInfo.username, gitInfo.repo, busFactor, rampup, license, correctness, maintainer, score);
+                    return [3 /*break*/, 11];
                 case 10:
+                    error_9 = _a.sent();
+                    //console.error(`Failed to get Metric info for ${gitInfo.username}/${gitInfo.repo}`);
+                    if (logLevel == 2) {
+                        fs.appendFile(logFilePath, "Failed to get Metric info for ".concat(gitInfo.username, "/").concat(gitInfo.repo, "\n"), function (err) { });
+                    }
+                    return [3 /*break*/, 11];
+                case 11:
                     i++;
                     return [3 /*break*/, 1];
-                case 11: return [2 /*return*/];
+                case 12: return [2 /*return*/];
             }
         });
     });
@@ -603,12 +695,12 @@ function get_metric_info(gitDetails) {
 // now actual metric score calculations
 function calcuBusFactor(x) {
     var result = (Math.pow((Math.log(x + 1) / (Math.log(1500 + 1))), 1.22));
-    console.log("Bus Factor: ".concat(result));
+    //console.log(`Bus Factor: ${result}`);
     return result;
 }
 function calcRampUpScore(x) {
     var result = (1 - (Math.pow((Math.log(x + 1) / (Math.log(105906 + 1))), 1.22)));
-    console.log("Ramp Up: ".concat(result));
+    //console.log(`Ramp Up: ${result}`);
     return result;
 }
 function calcLicenseScore(x) {
@@ -619,7 +711,7 @@ function calcLicenseScore(x) {
     else {
         licenseScore = 0;
     }
-    console.log("License: ".concat(licenseScore));
+    //console.log(`License: ${licenseScore}`);
     return licenseScore;
 }
 function calcCorrectnessScore(errors, filecount) {
@@ -643,65 +735,40 @@ function calcCorrectnessScore(errors, filecount) {
     else {
         correctnessScore = (1 - (scaledError));
     }
-    console.log("Correctness: ".concat(correctnessScore));
+    //console.log(`Correctness: ${correctnessScore}`);
     return correctnessScore;
 }
 function calcRespMaintScore(timeDifference, username, repo) {
     var sum = timeDifference.reduce(function (acc, value) { return acc + value; }, 0);
     var avg = sum / timeDifference.length;
     var maintainer = (1 - (avg / (86400000 * 30)));
-    console.log("Responsive Maintainer: ".concat(maintainer));
+    if (maintainer < 0) { // if average response is greater than a month 
+        maintainer = 0;
+    }
+    else {
+        maintainer = (1 - (avg / (86400000 * 30)));
+    }
+    //console.log(`Responsive Maintainer: ${maintainer}`);
     return maintainer;
 }
 function calcTotalScore(busFactor, rampup, license, correctness, maintainer) {
-    /*
-    Sarah highest priority is is not enough maintainers, we tie this into the responsive maintainer score
-    responsive ^
-    bus factor
-        important as we dont want package to die when one person leaves
-    ramp up
-        she explicitly wants a good ramp up score so engineers can work with the package easier
-    */
-    var busWeight = 0.10;
-    var rampupWeight = 0.20;
-    var respMaintWeight = 0.30;
-    var correctnessWeight = 0.40;
-    var busScore = busFactor * busWeight;
-    var rampupScore = rampup * rampupWeight;
-    var respMaintScore = maintainer * respMaintWeight;
-    var correctnessScore = correctness * correctnessWeight;
-    var score = busScore + rampupScore + respMaintScore + correctnessScore;
-    console.log("Total Score: ".concat(score));
+    return __awaiter(this, void 0, void 0, function () {
+        var busWeight, rampupWeight, respMaintWeight, correctnessWeight, busScore, rampupScore, respMaintScore, correctnessScore, score;
+        return __generator(this, function (_a) {
+            busWeight = 0.10;
+            rampupWeight = 0.20;
+            respMaintWeight = 0.30;
+            correctnessWeight = 0.40;
+            busScore = busFactor * busWeight;
+            rampupScore = rampup * rampupWeight;
+            respMaintScore = maintainer * respMaintWeight;
+            correctnessScore = correctness * correctnessWeight;
+            score = license * (busScore + rampupScore + respMaintScore + correctnessScore);
+            //console.log(`Total Score: ${score.toFixed(5)}`); // can allow more or less decimal, five for now
+            return [2 /*return*/, score];
+        });
+    });
 }
-/*
-function outputResults(
-    gitDetails: { username: string; repo: string }[],
-    maintainer: number,
-    busFactor: number,
-    rampup: number,
-    license: number,
-    correctness: number,
-    totalScore: number
-) {
-    const urls: string[] = gitDetails.map(
-        (detail) => `https://github.com/${detail.username}/${detail.repo}`
-    );
-    
-    for (let i = 0; i < urls.length; i++) {
-        const repoData: RepoData = {
-            URL: urls[i],
-            NET_SCORE: totalScore.toFixed(5),
-            RAMP_UP_SCORE: rampup.toFixed(5),
-            CORRECTNESS_SCORE: correctness.toFixed(5),
-            BUS_FACTOR_SCORE: busFactor.toFixed(5),
-            LICENSE_SCORE: license,
-            RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
-        };
-        console.log(JSON.stringify(repoData));
-    }
-    
-}
-*/
 //////////////////////////////////////////////////////////////////////
 function main() {
     return __awaiter(this, void 0, void 0, function () {
@@ -709,6 +776,9 @@ function main() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    if (fs.existsSync(logFilePath)) {
+                        fs.unlinkSync(logFilePath); // delete log file
+                    }
                     ensureDirectoryExistence('./temp_linter_test'); // make temp directory for linter test files
                     ensureDirectoryExistence('./temp_npm_json'); // make temp directory for npm json files
                     delay = function (ms) { return new Promise(function (res) { return setTimeout(res, ms); }); };
@@ -722,7 +792,10 @@ function main() {
                             (0, child_process_1.execSync)("npm install ".concat(pkg));
                         }
                         catch (_b) {
-                            console.error("Error installing dependency ".concat(pkg));
+                            //console.error(`Error installing dependency ${pkg}`);
+                            if (logLevel == 2) {
+                                fs.appendFile(logFilePath, "Error installing dependency ".concat(pkg, "\n"), function (err) { });
+                            }
                             process.exit(1);
                         }
                     }
@@ -739,7 +812,10 @@ function main() {
                     filename = arg;
                     urls = url_list(filename);
                     if (urls.length === 0) {
-                        console.log("No URLS found");
+                        //console.error("No URLS found");
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "No URLS found\n", function (err) { });
+                        }
                         process.exit(1);
                     }
                     urls.forEach(function (url) {
@@ -752,7 +828,10 @@ function main() {
                             gitDetails.push(gitInfo); // push to github details array
                         }
                         else {
-                            console.error("Error, invalid contents of file"); // non git or npm url
+                            //console.error(`Error, invalid url: ${url}`); // non git or npm url
+                            if (logLevel == 2) {
+                                fs.appendFile(logFilePath, "Error, invalid url: ".concat(url, "\n"), function (err) { });
+                            }
                         }
                     });
                     return [4 /*yield*/, get_npm_package_json(npmPkgName)];
@@ -761,6 +840,8 @@ function main() {
                     return [4 /*yield*/, get_metric_info(gitDetails)];
                 case 5:
                     _a.sent();
+                    fs.rmdirSync('./temp_linter_test', { recursive: true });
+                    fs.rmdirSync('./temp_npm_json', { recursive: true });
                     process.exit(0);
                     return [3 /*break*/, 7];
                 case 6:

@@ -1,0 +1,5 @@
+{"metric":"LICENSE_SCORE", "api":"rest", "filepath":"root/main.ts", "line": 268}
+{"metric":"RAMP_UP_SCORE", "api":"rest", "filepath":"root/main.ts", "line": 298}
+{"metric":"BUS_FACTOR_SCORE", "api":"rest", "filepath":"root/main.ts", "line": 244}
+{"metric":"RESPONSIVENESS_SCORE", "api":"rest", "filepath":"root/main.ts", "line": 527}
+{"metric":"CORRECTNESS_SCORE", "api":"rest", "filepath":"root/main.ts", "line": 359}

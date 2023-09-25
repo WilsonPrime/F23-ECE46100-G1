@@ -41,6 +41,10 @@ gitHubToken = lines[0].split('=')[1];
 logLevel = parseInt(lines[1].split('=')[1]), 10;
 logFilePath = lines[2].split('=')[1];
 
+
+ 
+// if we get here, we know the token is valid
+
 // octokit setup
 const octokit = new Octokit({ 
     auth: gitHubToken, // github token
@@ -722,6 +726,8 @@ async function calcTotalScore(busFactor: number, rampup: number, license: number
 
 async function main() { 
 
+   
+
     if (fs.existsSync(logFilePath)) { 
         fs.unlinkSync(logFilePath); // delete log file
     }
@@ -783,6 +789,15 @@ async function main() {
         }); 
 
         await get_npm_package_json(npmPkgName);
+        try {
+            execSync(`curl -f -H "Authorization: token ${gitHubToken}" https://api.github.com/user/repos 2>/dev/null`);
+        } catch (error) {
+            console.error(`Invalid GitHub token: ${gitHubToken}`);
+            if(logLevel == 2){
+                fs.appendFile(logFilePath, `Invalid GitHub token: ${gitHubToken}\n`, (err)=>{});
+            }
+            
+        }
         await get_metric_info(gitDetails);
         fs.rmdirSync('./temp_linter_test', { recursive: true });
         fs.rmdirSync('./temp_npm_json', { recursive: true });
@@ -794,4 +809,5 @@ async function main() {
         process.exit(1)
     }
 }
+
 main();

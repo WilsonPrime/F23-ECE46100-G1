@@ -69,6 +69,7 @@ var lines = envFileContents.split('\n');
 gitHubToken = lines[0].split('=')[1];
 logLevel = parseInt(lines[1].split('=')[1]), 10;
 logFilePath = lines[2].split('=')[1];
+// if we get here, we know the token is valid
 // octokit setup
 var octokit = new octokit_1.Octokit({
     auth: gitHubToken,
@@ -345,7 +346,7 @@ function fetchRepoLicense(username, repo) {
 }
 function fetchRepoReadme(username, repo) {
     return __awaiter(this, void 0, void 0, function () {
-        var repo_readme, readme, test, size_kb, size_kb_int, error_5;
+        var repo_readme, readme, test_1, size_kb, size_kb_int, error_5;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -360,10 +361,10 @@ function fetchRepoReadme(username, repo) {
                 case 1:
                     repo_readme = _a.sent();
                     readme = Buffer.from(repo_readme.data.content, 'base64').toString('utf8');
-                    test = readme.length;
-                    size_kb = (test / 1024).toFixed(2);
+                    test_1 = readme.length;
+                    size_kb = (test_1 / 1024).toFixed(2);
                     size_kb_int = parseInt(size_kb);
-                    if (test === 0) {
+                    if (test_1 === 0) {
                         //console.error(`Readme for ${username}/${repo}: No readme found`);
                         if (logLevel == 2) {
                             fs.appendFile(logFilePath, "Readme for ".concat(username, "/").concat(repo, ": No readme found\n"), function (err) { });
@@ -837,6 +838,15 @@ function main() {
                     return [4 /*yield*/, get_npm_package_json(npmPkgName)];
                 case 4:
                     _a.sent();
+                    try {
+                        (0, child_process_1.execSync)("curl -f -H \"Authorization: token ".concat(gitHubToken, "\" https://api.github.com/user/repos 2>/dev/null"));
+                    }
+                    catch (error) {
+                        //console.error(`Invalid GitHub token: ${gitHubToken}`);
+                        if (logLevel == 2) {
+                            fs.appendFile(logFilePath, "Invalid GitHub token: ".concat(gitHubToken, "\n"), function (err) { });
+                        }
+                    }
                     return [4 /*yield*/, get_metric_info(gitDetails)];
                 case 5:
                     _a.sent();

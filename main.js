@@ -842,9 +842,11 @@ function main() {
                         (0, child_process_1.execSync)("curl -f -H \"Authorization: token ".concat(gitHubToken, "\" https://api.github.com/user/repos 2>/dev/null"));
                     }
                     catch (error) {
-                        //console.error(`Invalid GitHub token: ${gitHubToken}`);
+                        console.error("Invalid GitHub token: ".concat(gitHubToken));
                         if (logLevel == 2) {
                             fs.appendFile(logFilePath, "Invalid GitHub token: ".concat(gitHubToken, "\n"), function (err) { });
+                            fs.rmSync('./temp_linter_test', { recursive: true });
+                            fs.rmSync('./temp_npm_json', { recursive: true });
                         }
                     }
                     return [4 /*yield*/, get_metric_info(gitDetails)];

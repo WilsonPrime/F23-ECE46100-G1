@@ -795,6 +795,8 @@ async function main() {
             console.error(`Invalid GitHub token: ${gitHubToken}`);
             if(logLevel == 2){
                 fs.appendFile(logFilePath, `Invalid GitHub token: ${gitHubToken}\n`, (err)=>{});
+                fs.rmSync('./temp_linter_test', { recursive: true });
+                fs.rmSync('./temp_npm_json', { recursive: true });
             }
             
         }

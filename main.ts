@@ -1,6 +1,7 @@
 import { Octokit, App } from "octokit"; // Octokit v17
 import * as fs from 'fs'; // use filesystem
 import { execSync } from 'child_process'; // to execute shell cmds
+import * as dotenv from 'dotenv';
 const { exec } = require('child_process'); // to execute shell cmds async version
 
 
@@ -9,7 +10,9 @@ const gitRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)/i; // regex to get use
 const arg = process.argv[2];  // this is the url(s).txt arguement passed to the js executable
 const npmPkgName: string[] = []; // setup array for package names
 const gitDetails: { username: string, repo: string }[] = []; // setup array for git user/repo name 
-const dependencies: string[] = ["octokit","--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint"]; // setup array for dependencies
+const dependencies: string[] = ["octokit",
+                                "--save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint",
+                                "--save dotenv @types/dotenv --save-dev"]; // setup array for dependencies
 const gitUrls: string[] = []; // setup array for git urls
 
 // could probably put in array but,"kiss"
@@ -18,31 +21,25 @@ const apache = "Apache" || "apache";
 const gpl = "GPL" || "gpl";
 const bsd = "BSD" || "bsd"; 
 
+dotenv.config()
 
-// to be read from .env...
-let gitHubToken: string = "";
-let logLevel: number = 1;
-let logFilePath: string = "";
-// if log file already exists, delete it so we can start fresh
+const gitHubToken: string = process.env.GITHUB_TOKEN!;
+const logLevel: number = parseFloat(process.env.LOG_LEVEL!);
+const logFilePath: string = process.env.LOG_FILE!;
+
+if(!gitHubToken || !logLevel || !logFilePath){
+    console.error("Error: environment variables not set...\n")
+    process.exit(1)
+}
 
 
-
-//  we will destroy this directory later
 function ensureDirectoryExistence(directory: string): void {
     if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
     }
 }
 
-// read .env file and store keys in global variables
-const envFileContents = fs.readFileSync('.env', 'utf-8');
-const lines = envFileContents.split('\n');
-gitHubToken = lines[0].split('=')[1];
-logLevel = parseInt(lines[1].split('=')[1]), 10;
-logFilePath = lines[2].split('=')[1];
 
-
- 
 // if we get here, we know the token is valid
 
 // octokit setup

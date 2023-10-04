@@ -565,12 +565,12 @@ async function fetchRepoIssues(username: string, repo: string) {
 
 interface RepoData {
     URL: string;
-    NET_SCORE: string;
-    RAMP_UP_SCORE: string;
-    CORRECTNESS_SCORE: string;
-    BUS_FACTOR_SCORE: string;
+    NET_SCORE: number;
+    RAMP_UP_SCORE: number;
+    CORRECTNESS_SCORE: number;
+    BUS_FACTOR_SCORE: number;
     LICENSE_SCORE: number;
-    RESPONSIVE_MAINTAINER_SCORE: string;
+    RESPONSIVE_MAINTAINER_SCORE: number;
 }
 
 
@@ -582,12 +582,12 @@ async function outputResults(username: string, repo: string, busFactor: number, 
     
     const repoData: RepoData = {
         URL: url,
-        NET_SCORE: score.toFixed(5),
-        RAMP_UP_SCORE: rampup.toFixed(5),
-        CORRECTNESS_SCORE: correctness.toFixed(5),
-        BUS_FACTOR_SCORE: busFactor.toFixed(5),
+        NET_SCORE: parseFloat(score.toFixed(5)),
+        RAMP_UP_SCORE: parseFloat(rampup.toFixed(5)),
+        CORRECTNESS_SCORE: parseFloat(correctness.toFixed(5)),
+        BUS_FACTOR_SCORE: parseFloat(busFactor.toFixed(5)),
         LICENSE_SCORE: license,
-        RESPONSIVE_MAINTAINER_SCORE: maintainer.toFixed(5),
+        RESPONSIVE_MAINTAINER_SCORE: parseFloat(maintainer.toFixed(5)),
     };
     console.log(JSON.stringify(repoData));
     if(logLevel >= 1){

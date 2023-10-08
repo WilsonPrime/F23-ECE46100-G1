@@ -1,9 +1,10 @@
 # F23-ECE46100-G1
 
-Repo for ECE461 ACME Project Phase 1
+Repo for ECE461 ACME Project Phase 2
 
-Group 1 Members
-Devon Holloway, Wilson Wong, Ben Roath, Andrew Zhang, Jaden Guidry
+Group 2 Members
+Matthew Ghera, Atharva Patil, Gabi Mazion, Christopher Louly, Neha Sharma
+
 
 To install dependencies, use the bash script "run" with install as the first argument to install all required dependencies. The list of dependency install commands is hosted as an array near the top of main.ts, which is where any extra dependencies should be added. This uses child_process execSync to run "npm install" with all dependency package names and conditional arguments, or exits the process with code 1 if errors occur.
 

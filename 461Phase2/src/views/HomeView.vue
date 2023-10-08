@@ -1,9 +1,11 @@
+<style lang="css" src="../assets/css/search.css"></style>
+
 <script setup lang="ts">
-import HelloWorld from '../components/HelloWorld.vue'
+  import SearchBar from '../components/searchBar.vue'
 </script>
 
 <template>
   <main>
-    <HelloWorld />
+    <SearchBar />
   </main>
 </template>

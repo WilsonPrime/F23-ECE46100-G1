@@ -739,20 +739,6 @@ async function main() {
 
 
     if (arg == "install") {
-        for(const pkg of dependencies) {
-            try{
-                execSync(`npm install ${pkg}`);
-            } catch {
-                //console.error(`Error installing dependency ${pkg}`);
-                if(logLevel == 2){
-                    fs.appendFile(logFilePath, `Error installing dependency ${pkg}\n`, (err)=>{});
-                }
-                process.exit(1);
-            }
-
-        }
-
-        console.log(`${dependencies.length} dependencies installed...\n`);
         process.exit(0);
     } else if (arg == "test") {
         console.log("Run test suite...\n");
@@ -808,3 +794,6 @@ async function main() {
 }
 
 main();
+
+
+// https://github.com/Purdue-ECE-461/is-sorted

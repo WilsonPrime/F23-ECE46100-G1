@@ -124,10 +124,6 @@ const get_github_info = (gitUrl: string): { username: string, repo: string} | nu
 // npmPkgName and gitDetails are the arrays we will use to get the package.json files, they hold:
     // the package names and github user/repo names
 
-
-
-
-
 const readJSON = (jsonPath: string, callback: (data: Record<string, unknown> | null) => void) => {
     fs.readFile(jsonPath, 'utf-8', (err, data) => {
       if (err) {
@@ -221,6 +217,7 @@ async function get_npm_package_json(pkgName: string []): Promise<void> {
 // here we are getting everything we need for our metrics from the api  (contributors, license, readme, issues, etc)
 
 async function fetchRepoInfo(username: string,repo: string) { 
+
     try { 
         const repo_info = await octokit.request("GET /repos/{owner}/{repo}", {
             owner: username,
@@ -237,6 +234,7 @@ async function fetchRepoInfo(username: string,repo: string) {
 }
 
 async function fetchRepoContributors(username: string, repo: string): Promise<number>{ 
+
     try {
         const repo_contributors = await octokit.paginate(`GET /repos/${username}/${repo}/contributors`, {
             per_page: 100,
@@ -261,6 +259,7 @@ async function fetchRepoContributors(username: string, repo: string): Promise<nu
 
 async function fetchRepoLicense(username: string, repo: string): Promise<number> { 
     //let licenseScore = 0; // define licenseScore here
+    
     try { 
         const response = await octokit.request("GET /repos/{owner}/{repo}/license", {
             owner: username,
@@ -291,6 +290,7 @@ async function fetchRepoLicense(username: string, repo: string): Promise<number>
 }
 
 async function fetchRepoReadme(username: string, repo: string): Promise <number> {
+
     try {
         const repo_readme = await octokit.request("GET /repos/{owner}/{repo}/readme", {
             owner: username,
@@ -334,6 +334,7 @@ interface RepoFile {
 
 async function fetchTsAndJsFiles(username: string, repo: string)  {
     // not gonna worry about overwriting files, we just need a decent amount to lint 
+
     try {
 
         const limitFiles = 25000; // changing this will limit how many files we get from a repo
@@ -406,7 +407,7 @@ async function fetchTsAndJsFiles(username: string, repo: string)  {
                     const fileContentDecoded = Buffer.from(fileContent, 'base64').toString('utf8');
                     const length = fileContentDecoded.length;
                     charsAccumulated += length;
-                    if (length === 0 || length < 1000) {
+                    if (length === 0) {
                         continue; // skip empty files and files less than 100 characters
                     }
                     const fileName = file.path?.split('/').pop();
@@ -442,6 +443,7 @@ async function fetchTsAndJsFiles(username: string, repo: string)  {
 }
 
 async function createLintDirs(username: string, repo: string) {
+
     const appendRepo = `/${repo}`;
     const subDir = `./temp_linter_test${appendRepo}`;
     ensureDirectoryExistence(subDir);
@@ -466,9 +468,12 @@ module.exports = {
     `;
     const config = esLintconfig.trim(); // remove whitespace
     fs.writeFileSync(`${subDir}/.eslintrc.cjs`, config);
+
+
 }
 
 async function fetchLintOutput(username: string, repo: string): Promise<number> {
+
     const subDir = `./temp_linter_test/${repo}`;
     try {
         let fileCount = await fetchTsAndJsFiles(username, repo);
@@ -501,6 +506,7 @@ async function fetchLintOutput(username: string, repo: string): Promise<number> 
 }
 
 function getErrorAndWarningCount(filepath: fs.PathOrFileDescriptor) {
+
     const file = fs.readFileSync(filepath, 'utf8');
     const lines = file.trim().split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {

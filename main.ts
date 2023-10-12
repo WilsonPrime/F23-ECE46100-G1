@@ -593,6 +593,8 @@ async function outputResults(username: string, repo: string, busFactor: number, 
         RESPONSIVE_MAINTAINER_SCORE: parseFloat(maintainer.toFixed(5)),
     };
     console.log(JSON.stringify(repoData));
+    const ndJsonpath = `./results.ndjson`;
+    fs.appendFileSync(ndJsonpath, JSON.stringify(repoData) + "\n");
     if(logLevel >= 1){
         fs.appendFileSync(logFilePath, JSON.stringify(repoData) + "\n");
     }
@@ -744,14 +746,7 @@ async function main() {
     await delay(1000); // wait 1 second
 
 
-    if (arg == "install") {
-        process.exit(0);
-    } else if (arg == "test") {
-        console.log("Run test suite...\n");
-        process.exit(0);
-
-    
-    } else if (/\.txt$/.test(arg)) {
+    if (/\.txt$/.test(arg)) {
 
         const filename = arg;
         const urls = url_list(filename); // grab urls from file. 
@@ -760,7 +755,7 @@ async function main() {
             if (logLevel == 2) {
                 fs.appendFile(logFilePath, `No URLS found\n`, (err)=>{});
             }
-            process.exit(1); 
+            process.exit(0); 
         }
         urls.forEach(url => {
             const npmPackageName = get_npm_package_name(url); // get package name 
@@ -790,12 +785,12 @@ async function main() {
         await get_metric_info(gitDetails);
         fs.rmdirSync('./temp_linter_test', { recursive: true });
         fs.rmdirSync('./temp_npm_json', { recursive: true });
-
+ 
         process.exit(0);
 
     } else {
-        console.log("Invalid command...\n")
-        process.exit(1)
+        console.log("Invalid command...\n");
+        process.exit(0);
     }
 }
 
